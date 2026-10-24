@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+@keyframes scanGlide {
+  0% {
+    top: 12%;
+    opacity: 0.85;
+  }
+  50% {
+    top: 88%;
+    opacity: 1;
+  }
+  100% {
+    top: 12%;
+    opacity: 0.85;
+  }
+}
+
+.animate-scan-glide {
+  animation: scanGlide 3s ease-in-out infinite;
+}

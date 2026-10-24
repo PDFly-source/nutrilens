@@ -1,0 +1,6 @@
+{
+  "name": "NutriLens - Smart Processed Food Scanner",
+  "description": "A privacy-first, local-in-browser food intelligence scanner to understand packaged food labels, nutrition, ingredients, and processing levels. Scan. Know. Choose.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
