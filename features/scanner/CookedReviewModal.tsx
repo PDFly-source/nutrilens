@@ -42,6 +42,12 @@ import {
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { CookedFoodReport } from '@/features/engine-v2/types';
 import { DishCandidate, isAmbiguous } from '@/features/engine-v2/vision-mapping';
+import { classifyConfidence, SCORE_DISCLAIMER } from '@/features/engine-v2/confidence-policy';
+import { buildIngredientEvidence } from '@/features/engine-v2/cooked/ingredient-evidence';
+import {
+  FOOD_CATEGORIES,
+  type FoodCategory,
+} from '@/features/engine-v2/indian-food-registry';
 
 interface CookedReviewModalProps {
   files: File[];
@@ -89,15 +95,15 @@ export function CookedReviewModal({
   );
   const [qualityNote, setQualityNote] = useState<string | null>(null);
   const [visionNote, setVisionNote] = useState<string | null>(() => {
-    const first = initialCandidates?.find((c) => findDishes(c.name).length > 0);
+    const first = initialCandidates?.find((c) => c.dishId || findDishes(c.name).length > 0);
     if (!initialCandidates || initialCandidates.length === 0) return null;
     if (!first) {
       return 'The recognition model could not match this photo to a known dish in our database — pick the closest option below.';
     }
     const pct = Math.round(first.confidence * 100);
-    return isAmbiguous(initialCandidates)
-      ? `Recognition ranked this as "${first.name}" (${pct}% confidence) but it is ambiguous — please confirm the dish below.`
-      : `Recognition identified "${first.name}" (${pct}%) — pre-selected for you, correct it if wrong.`;
+    const policy = classifyConfidence(initialCandidates);
+    const base = `${policy.reason} (${pct}% model score.)`;
+    return policy.decision === 'confirm' ? `${base} ${SCORE_DISCLAIMER}` : base;
   });
   const [visionBusy, setVisionBusy] = useState(() => !initialCandidates?.length);
   const [visionStatus, setVisionStatus] = useState<VisionStatus>({ state: 'idle' });
@@ -220,6 +226,25 @@ export function CookedReviewModal({
     return byQuery.length > 0 ? byQuery : query.trim() ? [] : DISH_DATABASE;
   }, [query]);
 
+  // v2.3: category-grouped dish picker (registry categories) when no query.
+  const pickerGroups = useMemo(() => {
+    if (query.trim()) {
+      return [{ label: '', dishes: matches.slice(0, 9) }];
+    }
+    const byCategory = new Map<FoodCategory, typeof DISH_DATABASE>();
+    for (const d of DISH_DATABASE) {
+      const cat = (byCategory.get(d.category as FoodCategory) ?? []).concat([d]);
+      byCategory.set(d.category as FoodCategory, cat);
+    }
+    const order: FoodCategory[] = FOOD_CATEGORIES.map((c) => c.id);
+    return order
+      .filter((c) => byCategory.has(c))
+      .map((c) => ({
+        label: FOOD_CATEGORIES.find((x) => x.id === c)!.label,
+        dishes: byCategory.get(c)!.slice(0, 4),
+      }));
+  }, [query, matches]);
+
   const estimate = useMemo(() => {
     if (!dish) return null;
     const input: EstimatorInput = {
@@ -270,6 +295,11 @@ export function CookedReviewModal({
         ...[fillingInput.trim(), sauceInput.trim()].filter(Boolean).map((t) => `${t} (you told us)`),
       ],
       inferredIngredients: dish.typicalVisible.filter((v) => !visibleIngredients.includes(v)),
+      ingredientEvidence: buildIngredientEvidence(dish, visibleIngredients, [
+        fillingInput.trim(),
+        sauceInput.trim(),
+      ].filter(Boolean)),
+      evidenceDisclaimer: SCORE_DISCLAIMER,
       cookingMethod: dish.cookingMethod.replace('_', ' '),
       assumptions: estimate.assumptions,
       unknowns: estimate.unknowns,
@@ -370,23 +400,35 @@ export function CookedReviewModal({
               />
             </div>
             <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {matches.slice(0, 9).map((d) => (
-                <button
-                  key={d.id}
-                  onClick={() => {
-                    setDishId(d.id);
-                    setVisibleIngredients([]);
-                    setPiecesInput('');
-                  }}
-                  className={`px-3 py-2 rounded-xl border text-xs font-medium text-left transition-colors ${
-                    dishId === d.id
-                      ? 'border-[#159A6A] bg-[#DDF5EA] dark:bg-emerald-950/60 text-[#0F7B52] dark:text-emerald-300'
-                      : 'border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800'
-                  }`}
-                >
-                  {d.name}
-                </button>
-              ))}
+              {pickerGroups.flatMap((g) => [
+                ...(g.label
+                  ? [
+                      <p
+                        key={`cat-${g.label}`}
+                        className="col-span-full text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500 mt-1"
+                      >
+                        {g.label}
+                      </p>,
+                    ]
+                  : []),
+                ...g.dishes.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => {
+                      setDishId(d.id);
+                      setVisibleIngredients([]);
+                      setPiecesInput('');
+                    }}
+                    className={`px-3 py-2 rounded-xl border text-xs font-medium text-left transition-colors ${
+                      dishId === d.id
+                        ? 'border-[#159A6A] bg-[#DDF5EA] dark:bg-emerald-950/60 text-[#0F7B52] dark:text-emerald-300'
+                        : 'border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800'
+                    }`}
+                  >
+                    {d.name}
+                  </button>
+                )),
+              ])}
               {matches.length === 0 && query.trim() && (
                 <p className="col-span-full text-xs text-stone-500">
                   No dish in the database matches “{query}”. Try a simpler term (e.g. “noodles”),

@@ -6,6 +6,8 @@
  * of the underlying data source.
  */
 
+import type { IngredientEvidenceItem } from './cooked/ingredient-evidence';
+
 /** Where a piece of information came from. */
 export type Provenance =
   | 'visually_observed' // seen in the image (OCR text, visible ingredients)
@@ -136,6 +138,10 @@ export interface CookedFoodReport {
   sodium?: MacroEstimate; // mg
   visibleIngredients: string[]; // visually observed / selected by user
   inferredIngredients: string[]; // typical for the dish, NOT observed
+  /** v2.3: per-ingredient evidence labels (visual / typical / unknown). */
+  ingredientEvidence?: IngredientEvidenceItem[];
+  /** v2.3: model-score disclaimer shown with recognition results. */
+  evidenceDisclaimer?: string;
   cookingMethod: string | null;
   /** Explicit assumption list shown to the user. */
   assumptions: string[];

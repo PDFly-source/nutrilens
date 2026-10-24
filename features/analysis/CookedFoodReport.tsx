@@ -146,6 +146,20 @@ export function CookedFoodReport({
           ) : (
             <p className="text-xs text-stone-500">Nothing confirmed as visible.</p>
           )}
+          {r.ingredientEvidence && r.ingredientEvidence.filter((i) => i.evidence === 'unknown').length > 0 && (
+            <div className="mt-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-1">
+                Needs your confirmation
+              </p>
+              <ul className="text-xs text-stone-500 space-y-0.5">
+                {r.ingredientEvidence
+                  .filter((i) => i.evidence === 'unknown')
+                  .map((i) => (
+                    <li key={i.name}>{i.name}</li>
+                  ))}
+              </ul>
+            </div>
+          )}
           {r.cookingMethod && (
             <p className="text-xs text-stone-500 mt-2">
               Cooking method assumed: {r.cookingMethod}.
@@ -167,6 +181,10 @@ export function CookedFoodReport({
           )}
         </div>
       </div>
+
+      {r.evidenceDisclaimer && (
+        <p className="text-[11px] text-stone-400 dark:text-stone-500">{r.evidenceDisclaimer}</p>
+      )}
 
       {/* Assumptions & unknowns */}
       <div className="rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/40 p-5 space-y-3">

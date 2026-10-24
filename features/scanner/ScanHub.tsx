@@ -8,6 +8,7 @@ import { CookedReviewModal } from '@/features/scanner/CookedReviewModal';
 import { FieldEvidenceMap } from '@/features/engine-v2/types';
 import { capabilitySummary } from '@/features/engine-v2/vision-provider';
 import { browserClassifyCooked } from '@/features/engine-v2/browser-vision';
+import { classifyConfidence } from '@/features/engine-v2/confidence-policy';
 import { DishCandidate } from '@/features/engine-v2/vision-mapping';
 import { findDishes, getDishById } from '@/features/engine-v2/cooked/dishes';
 import { compileProductAnalysis } from '@/features/scoring/engine';
@@ -107,7 +108,10 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
         const res = await browserClassifyCooked(files[0]);
         const ranked = res.candidates;
         const matched = ranked.filter((c) => (c.dishId ? getDishById(c.dishId) : findDishes(c.name).length > 0));
-        if (matched.length > 0) {
+        // v2.3: the tested confidence policy decides whether this evidence
+        // is strong enough to route to the cooked flow at all.
+        const policy = classifyConfidence(matched);
+        if (matched.length > 0 && policy.decision !== 'unknown') {
           setIsAnalyzing(false);
           setVisionCandidates(matched);
           setVisionVisible(res.visibleIngredients);
@@ -389,7 +393,7 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
       <p className="text-[11px] text-stone-400 dark:text-stone-500 pl-0.5">
         {capabilitySummary().cloudVision
           ? 'On-device analysis: recognition model + local OCR + public product database. Optional cloud adapter: configured.'
-          : 'On-device analysis: recognition model + local OCR + public product database lookup. No cloud, no API keys — the recognition model (~9.4 MB) downloads once on first cooked-dish scan.'}
+          : 'NutriLens 2.3: on-device recognition (Food-101 model, ~9.4 MB one-time download) + local OCR + public product database + curated Indian-dish registry (21 dishes, regional dishes marked experimental). No cloud, no API keys.'}
       </p>
 
       {/* v2: Ambiguity card — image type unknown, ask instead of guessing */}
