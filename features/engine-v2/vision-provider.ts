@@ -25,13 +25,9 @@ export interface VisionPackagedResult {
   confidence?: number;
 }
 
-export interface VisionCookedResult {
-  dish?: string | null;
-  alternatives?: string[];
-  visibleIngredients?: string[];
-  portionEstimateG?: number | null;
-  confidence?: number;
-}
+export type { CookedVisionResult, DishCandidate } from './vision-mapping';
+
+import type { CookedVisionResult } from './vision-mapping';
 
 export function isVisionConfigured(): boolean {
   if (typeof process === 'undefined') return false;
@@ -67,7 +63,9 @@ export async function visionAnalyzePackaged(req: VisionAnalysisRequest): Promise
  * Analyze a cooked-food photo with the configured vision endpoint.
  * Returns null when not configured.
  */
-export async function visionAnalyzeCooked(req: VisionAnalysisRequest): Promise<VisionCookedResult | null> {
+export async function visionAnalyzeCooked(
+  req: VisionAnalysisRequest
+): Promise<CookedVisionResult | null> {
   const endpoint = visionEndpoint();
   if (!endpoint) return null;
   const res = await fetch(`${endpoint}/api/analyze-cooked`, {
@@ -78,7 +76,7 @@ export async function visionAnalyzeCooked(req: VisionAnalysisRequest): Promise<V
   if (!res.ok) {
     throw new Error(`Vision endpoint returned HTTP ${res.status}`);
   }
-  return (await res.json()) as VisionCookedResult;
+  return (await res.json()) as CookedVisionResult;
 }
 
 /** Honest capability description for UI badges. */

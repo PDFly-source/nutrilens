@@ -70,17 +70,28 @@ export function resolveProduct(ocrText: string): ResolvedProduct {
     return { brand: null, title: null, flavour: null, netWeightG: null, netWeightRaw: null };
   }
 
-  // Brand via lexicon (word-boundary, case-insensitive).
+  // Brand via lexicon, per-LINE: real packages print the brand line and a
+  // separate manufacturer line ("Nestle India Ltd"). A match that sits on a
+  // manufacturer-style line is the manufacturer, NOT the product brand —
+  // claiming it as the brand is a real-world OCR misidentification we saw
+  // in validation, so it is excluded (brand stays honestly null then).
+  const MANUFACTURER_RE =
+    /\b(ltd|limited|pvt|private|inc|co|company|industries|foods?|farms|dairy|india|enterprises|marketing|address)\b/i;
   let brand: string | null = null;
-  for (const entry of BRAND_LEXICON) {
-    const found = entry.aliases.some((alias) => {
-      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(text);
-    });
-    if (found) {
-      brand = entry.display;
-      break;
+  const textLines = (text.match(/[^\n]+/g) || [text]).map((l) => l.trim());
+  for (const line of textLines) {
+    for (const entry of BRAND_LEXICON) {
+      const found = entry.aliases.some((alias) => {
+        const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(line);
+      });
+      if (found) {
+        if (MANUFACTURER_RE.test(line)) continue; // manufacturer line
+        brand = entry.display;
+        break;
+      }
     }
+    if (brand) break;
   }
 
   const netWeight = extractNetWeight(text);

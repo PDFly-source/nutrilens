@@ -457,9 +457,17 @@ export function ManualReviewModal({
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${isDetected ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold' : 'bg-stone-200/60 dark:bg-stone-800 text-stone-500'}`}>
                         {(() => {
                           if (!isDetected) return 'Not detected';
-                          const edited = dirtyNutritionRef.current.has(String(field));
                           const prov = evidence?.[String(field)]?.provenance;
-                          const tag = edited ? 'Edited' : prov === 'visually_observed' ? 'OCR' : val !== null ? 'Detected' : '';
+                          const tag =
+                            prov === 'user_provided'
+                              ? 'Edited'
+                              : prov === 'visually_observed'
+                                ? 'OCR'
+                                : prov === 'database_derived'
+                                  ? 'Database'
+                                  : val !== null
+                                    ? 'Detected'
+                                    : '';
                           return tag ? `${tag}: ${val}${unit}` : `${val}${unit}`;
                         })()}
                       </span>

@@ -8,7 +8,7 @@
  * live estimate with explicit uncertainty → confirm → cooked report.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   X,
   Search,
@@ -33,9 +33,14 @@ import { assessImageQualityBrowser } from '@/features/engine-v2/image-quality';
 import { isVisionConfigured, visionAnalyzeCooked } from '@/features/engine-v2/vision-provider';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { CookedFoodReport } from '@/features/engine-v2/types';
+import { DishCandidate, isAmbiguous } from '@/features/engine-v2/vision-mapping';
 
 interface CookedReviewModalProps {
   files: File[];
+  /** v2.1: ranked candidates from an automatic vision classification, if any. */
+  initialCandidates?: DishCandidate[];
+  initialVisible?: string[];
+  initialPortionG?: number | null;
   onConfirm: (analysis: ProductAnalysis) => void;
   onCancel: () => void;
 }
@@ -58,17 +63,41 @@ function emptyNutrition(): NutritionData {
   };
 }
 
-export function CookedReviewModal({ files, onConfirm, onCancel }: CookedReviewModalProps) {
+export function CookedReviewModal({
+  files,
+  initialCandidates,
+  initialVisible,
+  initialPortionG,
+  onConfirm,
+  onCancel,
+}: CookedReviewModalProps) {
   const [query, setQuery] = useState('');
-  const [dishId, setDishId] = useState<string | null>(null);
-  const [weightInput, setWeightInput] = useState('');
+  const [weightInput, setWeightInput] = useState(() =>
+    initialPortionG ? String(initialPortionG) : ''
+  );
   const [piecesInput, setPiecesInput] = useState('');
-  const [visibleIngredients, setVisibleIngredients] = useState<string[]>([]);
+  const [visibleIngredients, setVisibleIngredients] = useState<string[]>(() =>
+    initialVisible && initialVisible.length > 0 ? initialVisible : []
+  );
   const [qualityNote, setQualityNote] = useState<string | null>(null);
-  const [visionNote, setVisionNote] = useState<string | null>(null);
-  const [visionBusy, setVisionBusy] = useState(false);
+  const [visionNote, setVisionNote] = useState<string | null>(() => {
+    const first = initialCandidates?.find((c) => findDishes(c.name).length > 0);
+    if (!initialCandidates || initialCandidates.length === 0) return null;
+    if (!first) {
+      return 'The vision model could not match this photo to a known dish in our database — pick the closest option below.';
+    }
+    const pct = Math.round(first.confidence * 100);
+    return isAmbiguous(initialCandidates)
+      ? `Vision model ranked this as "${first.name}" (${pct}% confidence) but it is ambiguous — please confirm the dish below.`
+      : `Vision model identified "${first.name}" (${pct}%) — pre-selected for you, correct it if wrong.`;
+  });
+  const [visionBusy, setVisionBusy] = useState(
+    () => isVisionConfigured() && !initialCandidates?.length
+  );
+  // v2.1: follow-up answers (user-provided evidence)
+  const [fillingInput, setFillingInput] = useState('');
+  const [sauceInput, setSauceInput] = useState('');
 
-  const dish = dishId ? getDishById(dishId) : null;
 
   const previewUrl = useMemo(() => (files[0] ? URL.createObjectURL(files[0]) : null), [files]);
 
@@ -84,23 +113,40 @@ export function CookedReviewModal({ files, onConfirm, onCancel }: CookedReviewMo
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
-  // Vision model classification — only when an endpoint is configured.
+  // v2.1: automatic classification results are applied ONCE during the
+  // first render via lazy initial state (no effect → no cascading renders).
+  const [dishId, setDishId] = useState<string | null>(() => {
+    const first = initialCandidates?.find((c) => findDishes(c.name).length > 0);
+    return first ? findDishes(first.name)[0].id : null;
+  });
+  const dish = dishId ? getDishById(dishId) : null;
+
+
+  // In-modal classification when ScanHub did not pre-classify (e.g. user
+  // picked Cooked mode directly) — only when an endpoint is configured.
   useEffect(() => {
-    if (!isVisionConfigured() || !previewUrl) return;
+    if (!isVisionConfigured() || !previewUrl || initialCandidates?.length) return;
     let cancelled = false;
     (async () => {
-      setVisionBusy(true);
       try {
         const res = await visionAnalyzeCooked({
           images: [{ dataUrl: previewUrl }],
           mode: 'cooked',
         });
-        if (cancelled || !res?.dish) return;
-        const matches = findDishes(res.dish);
-        if (matches.length > 0) {
-          setDishId(matches[0].id);
+        if (cancelled || !res || res.candidates.length === 0) return;
+        const ranked = res.candidates
+          .map((c) => ({ c, dishes: findDishes(c.name) }))
+          .filter((r) => r.dishes.length > 0);
+        if (ranked.length > 0) {
+          setDishId(ranked[0].dishes[0].id);
+          if (res.visibleIngredients.length > 0) setVisibleIngredients(res.visibleIngredients);
+          if (res.portionEstimateG) setWeightInput(String(res.portionEstimateG));
+          const pct = Math.round(ranked[0].c.confidence * 100);
           setVisionNote(
-            `Vision model suggests "${res.dish}" (${Math.round((res.confidence ?? 0.5) * 100)}% confidence) — please confirm or correct.`
+            (res.note ? `${res.note} ` : '') +
+              (isAmbiguous(res.candidates)
+                ? `Ranked "${ranked[0].c.name}" first (${pct}%) but ambiguous — please confirm.`
+                : `Identified as "${ranked[0].c.name}" (${pct}%) — correct it if wrong.`)
           );
         }
       } catch {
@@ -114,7 +160,7 @@ export function CookedReviewModal({ files, onConfirm, onCancel }: CookedReviewMo
     return () => {
       cancelled = true;
     };
-  }, [previewUrl]);
+  }, [previewUrl, initialCandidates]);
 
   const matches = useMemo(() => {
     const byQuery = findDishes(query);
@@ -166,7 +212,10 @@ export function CookedReviewModal({ files, onConfirm, onCancel }: CookedReviewMo
       fat: estimate.fat,
       fiber: estimate.fiber ?? undefined,
       sodium: estimate.sodium ?? undefined,
-      visibleIngredients,
+      visibleIngredients: [
+        ...visibleIngredients,
+        ...[fillingInput.trim(), sauceInput.trim()].filter(Boolean).map((t) => `${t} (you told us)`),
+      ],
       inferredIngredients: dish.typicalVisible.filter((v) => !visibleIngredients.includes(v)),
       cookingMethod: dish.cookingMethod.replace('_', ' '),
       assumptions: estimate.assumptions,
@@ -316,6 +365,58 @@ export function CookedReviewModal({ files, onConfirm, onCancel }: CookedReviewMo
                     placeholder={`e.g. 6 (${dish.pieceWeightMinG}–${dish.pieceWeightMaxG} g each)`}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/60 text-sm focus:outline-none focus:ring-2 focus:ring-[#159A6A]"
                   />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* v2.1: follow-up questions — answers are user-provided evidence */}
+          {dish && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                  Filling / main component? (optional)
+                </label>
+                <input
+                  type="text"
+                  value={fillingInput}
+                  onChange={(e) => setFillingInput(e.target.value)}
+                  placeholder="e.g. veg momo, potato samosa, paneer…"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/60 text-sm focus:outline-none focus:ring-2 focus:ring-[#159A6A]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                  Sauce / chutney on the side? (optional)
+                </label>
+                <input
+                  type="text"
+                  value={sauceInput}
+                  onChange={(e) => setSauceInput(e.target.value)}
+                  placeholder="e.g. tomato chutney, mayo-dip…"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/60 text-sm focus:outline-none focus:ring-2 focus:ring-[#159A6A]"
+                />
+              </div>
+              {DISH_DATABASE.filter(
+                (d) => d.id !== dish.id && d.category === dish.category && d.cookingMethod !== dish.cookingMethod
+              ).length > 0 && (
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                    Cooking method — does a variant below fit better?
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {DISH_DATABASE.filter(
+                      (d) => d.id !== dish.id && d.category === dish.category && d.cookingMethod !== dish.cookingMethod
+                    ).map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => setDishId(v.id)}
+                        className="px-3 py-1.5 rounded-full border border-stone-200 dark:border-stone-700 text-xs text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800"
+                      >
+                        {v.name} ({v.cookingMethod.replace('_', ' ')})
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

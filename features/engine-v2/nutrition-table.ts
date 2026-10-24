@@ -22,6 +22,8 @@ export type TableBasis = 'per_100g' | 'per_serving' | 'per_package';
 export interface TableRow {
   label: string;
   values: { basis: TableBasis; value: number; unit: string | null }[];
+  /** true when fewer cells than table columns survived OCR — alignment unsure. */
+  partial: boolean;
 }
 
 export interface NutritionTable {
@@ -60,14 +62,31 @@ const NUM = /[0-9]+(?:[.,][0-9]+)?/;
  * Rows are split on 2+ spaces (OCR preserves column gaps) or tabs.
  */
 export function splitTableRow(line: string): { label: string; cells: string[] } | null {
+  // 1. Column gaps preserved by OCR (2+ spaces / tabs).
   const parts = line.split(/\s{2,}|\t+/).map((p) => p.trim()).filter((p) => p.length > 0);
-  if (parts.length < 2) return null;
-  const label = parts[0];
-  const cells = parts.slice(1);
-  const numericCells = cells.filter((c) => NUM.test(c));
-  if (numericCells.length === 0) return null;
-  // Label must not itself be just a number.
-  if (/^[0-9.,\s]+$/.test(label)) return null;
+  if (parts.length >= 2) {
+    const label = parts[0];
+    const cells = parts.slice(1);
+    if (cells.filter((c) => NUM.test(c)).length === 0) return null;
+    if (/^[0-9.,\s]+$/.test(label)) return null;
+    return { label, cells };
+  }
+  // 2. REAL-OCR fallback: tesseract frequently collapses column gaps to a
+  // single space ("Energy 406 kcal 122 kcal"). Recover cells as numeric
+  // tokens; everything before the first token is the label.
+  // No trailing \b: OCR noise like "3.4q9" (g misread) must still yield 3.4.
+  const tokenRe = /(\d+(?:[.,]\d+)?)\s*(kcal|kj|k\s*j|mg|mcg|µg|ug|g)?/gi;
+  const tokens: { text: string; index: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = tokenRe.exec(line)) !== null) {
+    tokens.push({ text: m[0].trim(), index: m.index });
+  }
+  if (tokens.length === 0) return null;
+  const label = line.slice(0, tokens[0].index).trim();
+  if (!/[a-z]{2}/i.test(label)) return null;
+  // Two adjacent tokens must be separated by whitespace, not glued ("2.2g"
+  // is one token; "122 kcal" splits value and unit which is fine).
+  const cells = tokens.map((t) => t.text);
   return { label, cells };
 }
 
@@ -162,7 +181,7 @@ export function parseNutritionTable(text: string): NutritionTable {
       values.push({ basis, value: parsed.value, unit: parsed.unit });
     });
     if (values.length > 0) {
-      rows.push({ label: split.label, values });
+      rows.push({ label: split.label, values, partial: values.length !== bases.length });
     }
   }
 
@@ -192,9 +211,13 @@ export function resolveBasis(table: NutritionTable): BasisResolvedNutrition {
     }
   }
 
-  for (const row of table.rows) {
+  // Complete rows win; partial rows are only used when nothing else exists
+  // for that nutrient (their column alignment is not guaranteed).
+  const orderedRows = [...table.rows].sort((a, b) => Number(a.partial) - Number(b.partial));
+  for (const row of orderedRows) {
     let nutrient = matchNutrientRow(row.label);
     if (!nutrient) continue;
+    if (out[nutrient]) continue;
     let chosen = row.values.find((v) => v.basis === chosenBasis);
     if (!chosen) chosen = row.values[0];
     // An Energy row printed only in kJ is energy in kilojoules — map it to

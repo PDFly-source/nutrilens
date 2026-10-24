@@ -6,7 +6,9 @@ import { CameraModal } from '@/features/scanner/CameraModal';
 import { ManualReviewModal } from '@/features/scanner/ManualReviewModal';
 import { CookedReviewModal } from '@/features/scanner/CookedReviewModal';
 import { FieldEvidenceMap } from '@/features/engine-v2/types';
-import { capabilitySummary } from '@/features/engine-v2/vision-provider';
+import { capabilitySummary, isVisionConfigured, visionAnalyzeCooked } from '@/features/engine-v2/vision-provider';
+import { DishCandidate } from '@/features/engine-v2/vision-mapping';
+import { findDishes } from '@/features/engine-v2/cooked/dishes';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { analyzeFoodImages } from '@/features/ocr/unified-analyzer';
 import { mergeNutritionData, describeConflicts, mergeReviewFields } from '@/features/ocr/merge';
@@ -77,6 +79,10 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
   const [routeMode, setRouteMode] = useState<'auto' | 'packaged' | 'cooked'>('auto');
   const [cookedFiles, setCookedFiles] = useState<File[] | null>(null);
   const [ambiguousFiles, setAmbiguousFiles] = useState<File[] | null>(null);
+  // v2.1: automatic vision classification results (ranked candidates)
+  const [visionCandidates, setVisionCandidates] = useState<DishCandidate[] | undefined>(undefined);
+  const [visionVisible, setVisionVisible] = useState<string[] | undefined>(undefined);
+  const [visionPortionG, setVisionPortionG] = useState<number | null | undefined>(undefined);
 
   // Trigger analysis on an array of files
   const runFileAnalysis = async (files: File[], mode: ScanMode = 'nutrition') => {
@@ -86,6 +92,42 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
     if (routeMode === 'cooked') {
       setCookedFiles(files);
       return;
+    }
+
+    // v2.1: automatic recognition — when a secure vision endpoint is
+    // configured, classify BEFORE the heavy packaged OCR pipeline and route
+    // cooked food directly. Unreachable/unconfigured → normal packaged flow.
+    if (routeMode === 'auto' && isVisionConfigured()) {
+      setIsAnalyzing(true);
+      setAnalysisStage('Identifying the food with the vision model...');
+      setAnalysisPercent(10);
+      try {
+        const first = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error('Could not read image'));
+          reader.readAsDataURL(files[0]);
+        });
+        const res = await visionAnalyzeCooked({ images: [{ dataUrl: first }], mode: 'cooked' });
+        const ranked = res?.candidates ?? [];
+        const matched = ranked.filter((c) => findDishes(c.name).length > 0);
+        if (matched.length > 0) {
+          setIsAnalyzing(false);
+          setVisionCandidates(matched);
+          setVisionVisible(res?.visibleIngredients);
+          setVisionPortionG(res?.portionEstimateG ?? null);
+          setCookedFiles(files);
+          return;
+        }
+        // Model saw food but nothing matched our database → cooked flow with
+        // honest note; or the model said "packaged" → fall through to OCR.
+        if (ranked.length === 0 && res?.note && /packag/i.test(res.note)) {
+          // continue into the packaged pipeline below
+        }
+      } catch {
+        // Vision unreachable — continue with the packaged pipeline honestly.
+      }
+      setIsAnalyzing(false);
     }
 
     setIsAnalyzing(true);
@@ -378,7 +420,7 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
               }}
               className="px-4 py-2.5 rounded-xl bg-[#159A6A] hover:bg-[#12855A] text-white text-sm font-semibold flex items-center gap-2"
             >
-              <ChefHat className="w-4 h-4" /> It's a cooked dish
+              <ChefHat className="w-4 h-4" /> It&#39;s a cooked dish
             </button>
             <button
               type="button"
@@ -388,7 +430,7 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
               }}
               className="px-4 py-2.5 rounded-xl border border-amber-300 dark:border-amber-800 text-sm font-medium text-amber-900 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 flex items-center gap-2"
             >
-              <Package className="w-4 h-4" /> It's a package — I'll retake the label
+              <Package className="w-4 h-4" /> It&#39;s a package — I&#39;ll retake the label
             </button>
             <button
               type="button"
@@ -628,7 +670,15 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
       {cookedFiles && (
         <CookedReviewModal
           files={cookedFiles}
-          onCancel={() => setCookedFiles(null)}
+          initialCandidates={visionCandidates}
+          initialVisible={visionVisible}
+          initialPortionG={visionPortionG}
+          onCancel={() => {
+            setCookedFiles(null);
+            setVisionCandidates(undefined);
+            setVisionVisible(undefined);
+            setVisionPortionG(undefined);
+          }}
           onConfirm={(analysis) => {
             setCookedFiles(null);
             onScanComplete(analysis);
