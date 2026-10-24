@@ -15,8 +15,9 @@ import {
   parseIngredientsText,
   detectMarketingClaimsFromText,
   detectImageTypeFromText,
+  extractBrandAndName,
 } from '@/features/ocr/parser';
-import { runLocalOcr } from '@/features/ocr/ocr-service';
+import { runLocalOcr, warmUpOcrEngine } from '@/features/ocr/ocr-service';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 
 export interface UnifiedAnalysisInput {
@@ -267,77 +268,140 @@ export async function analyzeFoodImages(
     };
   }
 
-  // Local OCR Fallback (with strict 7s timeout to prevent 40% hang!)
-  onProgress?.('Running local text recognition engine...', 55);
+  // ============================================================
+  // LOCAL OCR FALLBACK (static hosting, e.g. GitHub Pages)
+  // ============================================================
+  // The server vision route (/api/analyze-image) is unavailable on static
+  // hosts. We run the on-device Tesseract.js OCR pipeline on EVERY image of
+  // the session and parse the combined text with validated rules.
+  // The engine is a persistent worker; the FIRST run must download the wasm
+  // core + eng.traineddata (~4-10MB), which can take tens of seconds on slow
+  // connections — hence a generous 90s ceiling instead of the old 7s timeout
+  // that silently killed every production scan.
+  onProgress?.('Loading local text recognition engine...', 55);
+
+  const OCR_TOTAL_TIMEOUT_MS = 90_000;
+  let ocrFailureReason: string | null = null;
+  const perImageTexts: string[] = [];
+
+  const ocrAllImages = (async () => {
+    for (let i = 0; i < preprocessedList.length; i++) {
+      const primary = preprocessedList[i];
+      const basePct = 55 + (i / preprocessedList.length) * 30;
+      const span = 30 / preprocessedList.length;
+      try {
+        // Decode the preprocessed image onto a canvas for the OCR engine.
+        const img = new Image();
+        img.src = primary.dataUrl;
+        await new Promise((res, rej) => {
+          img.onload = res;
+          img.onerror = () => rej(new Error('Failed to decode image for OCR'));
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = primary.width;
+        canvas.height = primary.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.drawImage(img, 0, 0);
+
+        const res = await runLocalOcr(canvas, (status, prog) => {
+          onProgress?.(
+            `${status}${preprocessedList.length > 1 ? ` (photo ${i + 1}/${preprocessedList.length})` : ''}`,
+            Math.min(88, basePct + prog * span)
+          );
+        });
+        perImageTexts.push(res.text || '');
+      } catch (err: any) {
+        ocrFailureReason = err?.message || 'OCR engine failure';
+        perImageTexts.push('');
+      }
+    }
+    return perImageTexts.join('\n\n');
+  })();
 
   let rawOcrText = '';
   try {
     const ocrTimeout = new Promise<string>((_, reject) =>
-      setTimeout(() => reject(new Error('Local OCR timed out after 7 seconds')), 7000)
+      setTimeout(
+        () => reject(new Error('Local OCR timed out after 90 seconds')),
+        OCR_TOTAL_TIMEOUT_MS
+      )
     );
-
-    const ocrExecution = (async () => {
-      // Create offscreen image/canvas for first image
-      const primary = preprocessedList[0];
-      const img = new Image();
-      img.src = primary.dataUrl;
-      await new Promise((res) => {
-        img.onload = res;
-      });
-
-      const canvas = document.createElement('canvas');
-      canvas.width = primary.width;
-      canvas.height = primary.height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.drawImage(img, 0, 0);
-
-      const res = await runLocalOcr(canvas, (status, prog) => {
-        onProgress?.(`${status} (${Math.round(prog * 100)}%)`, Math.min(85, 55 + prog * 30));
-      });
-      return res.text;
-    })();
-
-    rawOcrText = await Promise.race([ocrExecution, ocrTimeout]);
-  } catch (ocrErr) {
+    rawOcrText = await Promise.race([ocrAllImages, ocrTimeout]);
+  } catch (ocrErr: any) {
     console.warn('[NutriLens Engine] Local OCR failed or timed out:', ocrErr);
-    rawOcrText = '';
+    rawOcrText = perImageTexts.join('\n\n');
+    if (!ocrFailureReason) {
+      ocrFailureReason = ocrErr?.message || 'OCR timed out';
+    }
   }
 
-  onProgress?.('Validating extracted fields...', 85);
+  onProgress?.('Validating extracted fields...', 88);
 
+  // ---- Evidence-based field extraction from the combined OCR text ----
   const parsedNutrition = parseNutritionText(rawOcrText);
   const parsedIngredients = parseIngredientsText(rawOcrText);
   const detectedClaims = detectMarketingClaimsFromText(rawOcrText);
   const imageType = detectImageTypeFromText(rawOcrText);
+  const { brand: detectedBrand, productName: detectedName } =
+    extractBrandAndName(rawOcrText);
+
+  // NOTE: image filenames, timestamps, and numeric identifiers are NEVER used
+  // as the product name. The name comes only from text actually recognized in
+  // the image (or is left unknown for manual entry on the review screen).
+  const productName = detectedName || '';
+  const brand = detectedBrand;
 
   for (const img of imageItems) {
     img.imageType = imageType;
   }
 
+  const ocrProducedSomeText = rawOcrText.replace(/\s/g, '').length >= 10;
+  const hasNutritionEvidence =
+    parsedNutrition.calories !== null ||
+    parsedNutrition.protein !== null ||
+    parsedNutrition.totalFat !== null ||
+    parsedNutrition.sodium !== null;
+  const hasIngredientsEvidence = (parsedIngredients.cleanRawList || '').trim().length > 0;
+
   const isFrontPackageOnly =
     imageType === 'front_package' ||
-    (parsedNutrition.calories === null &&
-      parsedNutrition.protein === null &&
-      parsedNutrition.totalFat === null);
+    (!hasNutritionEvidence && !hasIngredientsEvidence);
 
-  const fallbackProductName =
-    preprocessedList[0].name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Packaged Food Product';
-
-  const detectionNotes = isFrontPackageOnly
-    ? 'Front package view detected. Nutrition facts not found in image text.'
-    : 'Local text extraction completed.';
+  // ---- Honest detection notes ----
+  let detectionNotes: string;
+  if (!ocrProducedSomeText && ocrFailureReason) {
+    detectionNotes =
+      `Could not read text from this photo (${ocrFailureReason}). ` +
+      'Values were left unknown — please type them in manually, or retake the photo with sharper focus and good lighting.';
+  } else if (!ocrProducedSomeText) {
+    detectionNotes =
+      'No readable text was found in this photo. Values were left unknown — please type them in manually, or retake the photo with sharper focus and good lighting.';
+  } else if (isFrontPackageOnly) {
+    detectionNotes =
+      'This looks like the FRONT of the package, which usually shows only the brand and product name. ' +
+      'Please add a photo of the BACK of the package (nutrition table + ingredients) to complete the report.';
+  } else if (ocrFailureReason) {
+    detectionNotes =
+      `Partial recognition: one photo could not be read (${ocrFailureReason}). ` +
+      'Detected values are shown below — please verify them before generating the report.';
+  } else {
+    detectionNotes =
+      'Text recognized on-device. Please verify the detected values below before generating the report.';
+  }
 
   const compiled = compileProductAnalysis({
     scanMode: mode,
     imageType,
-    productName: fallbackProductName,
+    productName: productName || 'Packaged Food Product',
+    brand,
     nutrition: parsedNutrition,
     ingredients: parsedIngredients.items,
     rawIngredientsText: parsedIngredients.cleanRawList,
     detectedClaims: detectedClaims,
     imagePreviewUrl: preprocessedList[0].dataUrl,
     images: imageItems,
-    nutritionConfidence: isFrontPackageOnly ? 'none' : 'medium',
+    nutritionConfidence: hasNutritionEvidence ? 'medium' : 'none',
     detectionNotes,
   });
 
@@ -347,8 +411,8 @@ export async function analyzeFoodImages(
     analysis: compiled,
     extractedNutrition: parsedNutrition,
     ingredientsText: parsedIngredients.cleanRawList,
-    productName: fallbackProductName,
-    brand: null,
+    productName,
+    brand,
     productVariant: null,
     claims: detectedClaims,
     imageType,

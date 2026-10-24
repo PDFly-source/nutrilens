@@ -6,6 +6,7 @@ import { CameraModal } from '@/features/scanner/CameraModal';
 import { ManualReviewModal } from '@/features/scanner/ManualReviewModal';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { analyzeFoodImages } from '@/features/ocr/unified-analyzer';
+import { mergeNutritionData, describeConflicts, mergeReviewFields } from '@/features/ocr/merge';
 import {
   Barcode,
   FileText,
@@ -55,8 +56,13 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
     images?: ScanImageItem[];
     imageType?: ImageType;
     detectionNotes?: string;
+    conflicts?: string[];
     mode: ScanMode;
   } | null>(null);
+  // Incremented whenever a new extraction (e.g. an added photo's results)
+  // is merged into the review payload, so the review modal can apply the
+  // merge without clobbering fields the user has manually edited.
+  const [reviewSeq, setReviewSeq] = useState(0);
 
   // Trigger analysis on an array of files
   const runFileAnalysis = async (files: File[], mode: ScanMode = 'nutrition') => {
@@ -138,18 +144,33 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
         setAnalysisStage(stage);
         setAnalysisPercent(pct);
       });
+
+      // Evidence-based merge: keep everything already extracted/entered and
+      // fill ONLY unknown fields from the new photo's results. Conflicting
+      // readings between photos are flagged for manual review, never
+      // silently overwritten.
+      const { merged, conflicts } = mergeNutritionData(
+        reviewPayload.nutrition,
+        result.extractedNutrition
+      );
+      const conflictLabels = describeConflicts(conflicts);
+
       setReviewPayload({
-        nutrition: result.extractedNutrition,
-        ingredientsText: result.ingredientsText,
-        productName: result.productName,
-        brand: result.brand,
-        claims: result.claims,
+        nutrition: merged,
+        ingredientsText: mergeReviewFields(reviewPayload.ingredientsText, result.ingredientsText),
+        productName: mergeReviewFields(reviewPayload.productName, result.productName),
+        brand: mergeReviewFields(reviewPayload.brand ?? '', result.brand ?? '') || null,
+        claims: Array.from(new Set([...(reviewPayload.claims || []), ...(result.claims || [])])),
         imagePreviewUrl: result.imagesProcessed[0]?.dataUrl,
         images: result.imagesProcessed,
         imageType: result.imageType,
-        detectionNotes: result.detectionNotes,
+        detectionNotes: conflictLabels.length
+          ? `${result.detectionNotes} Conflicting readings between photos for: ${conflictLabels.join(', ')} — please verify.`
+          : result.detectionNotes,
+        conflicts: conflictLabels,
         mode: reviewPayload.mode,
       });
+      setReviewSeq((seq) => seq + 1);
     } catch (err: any) {
       console.error('Adding photo error:', err);
     } finally {
@@ -492,6 +513,8 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
           imagePreviewUrl={reviewPayload.imagePreviewUrl}
           images={reviewPayload.images}
           detectionNotes={reviewPayload.detectionNotes}
+          conflicts={reviewPayload.conflicts}
+          extractionSeq={reviewSeq}
           onAddAnotherPhoto={handleAddAnotherPhotoInReview}
           onConfirm={(analyzed) => {
             setReviewPayload(null);

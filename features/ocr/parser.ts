@@ -68,15 +68,27 @@ export function parseNutritionText(rawText: string): NutritionData {
 
   const text = normalizeOcrText(rawText);
 
-  // Serving Size - Never default to "1 package / serving"
+  // Serving Size - Never default to "1 package / serving".
+  // Scan ALL matches per pattern and take the first non-garbage candidate so a
+  // stray "(per 100g)*" echo earlier on the label cannot consume the slot.
   let servingSize: string | null = null;
-  const servingMatch = text.match(/(?:serving\s*size|per\s*serving|serv\s*size|per\s*100\s*g|per\s*100g)\s*[:\s]?\s*([^\n\r]+)/i);
-  if (servingMatch && servingMatch[1]) {
-    const candidate = servingMatch[1].trim().slice(0, 40);
-    if (!isLikelyGarbageText(candidate)) {
-      servingSize = candidate;
+  const servingSizePatterns = [
+    /serving\s*size\s*[:\s]?\s*([^\n\r]+)/gi,
+    /serv\s*size\s*[:\s]?\s*([^\n\r]+)/gi,
+    /per\s*serving\s*[:\s]?\s*([^\n\r]+)/gi,
+  ];
+  for (const pattern of servingSizePatterns) {
+    let m: RegExpExecArray | null;
+    while ((m = pattern.exec(text)) !== null) {
+      const candidate = (m[1] || '').trim().slice(0, 40);
+      if (candidate && !isLikelyGarbageText(candidate)) {
+        servingSize = candidate;
+        break;
+      }
     }
-  } else if (/per\s*100\s*g/i.test(text)) {
+    if (servingSize) break;
+  }
+  if (!servingSize && /per\s*100\s*g/i.test(text)) {
     servingSize = '100g';
   }
 
@@ -176,10 +188,10 @@ export function parseNutritionText(rawText: string): NutritionData {
     /sugars?\s*[:\s]?\s*([0-9.,]+|nil|zero)\s*g/i,
   ]);
 
-  // Added Sugars
+  // Added Sugars (label-first format is the most common)
   const addedSugars = extractNumberOrNull(text, [
-    /(?:includes\s*)?([0-9.,]+|nil|zero)\s*g?\s*added\s*sugars?/i,
     /added\s*sugars?\s*[:\s]?\s*([0-9.,]+|nil|zero)\s*g?/i,
+    /(?:includes\s*)?([0-9.,]+|nil|zero)\s*g?\s*added\s*sugars?/i,
   ]);
 
   // Protein
@@ -223,6 +235,17 @@ export function parseIngredientsText(rawText: string): {
   const match = text.match(/ingredients?\s*[:\s]\s*([\s\S]+?)(?=(?:contains|may contain|allergy advice|manufactured|nutrition facts|mfg|exp|batch|$))/i);
   if (match && match[1]) {
     ingredientsSection = match[1].trim();
+  } else if (!/ingredients?\s*[:\-\u2013\u2014\n]/i.test(text)) {
+    // HONESTY GATE: without an "Ingredients" header, accept ONLY a clearly
+    // list-shaped text (>= 2 list separators, simple label characters).
+    // A plain sentence or unrelated OCR text is never fabricated into a
+    // fake ingredient list.
+    const isListShaped =
+      (text.match(/[,;]/g) || []).length >= 2 &&
+      /^[A-Za-z0-9\s.,%()\u2013\u2014']+$/.test(text.trim());
+    if (!isListShaped) {
+      return { items: [], cleanRawList: '', isGarbageRejected: true };
+    }
   }
 
   // Run Garbage Check
@@ -387,4 +410,169 @@ export function detectImageTypeFromText(text: string): ImageType {
   if (lower.length > 20 && !hasNutrition && !hasIngredients) return 'front_package';
 
   return 'unknown' as any;
+}
+
+/* ============================================================
+ * Brand & Product Name Extraction (OCR fallback)
+ * ============================================================ */
+
+import { BRAND_LEXICON, PRODUCT_TYPE_WORDS } from '@/data/brand-lexicon';
+
+export interface BrandAndName {
+  brand: string | null;
+  productName: string | null;
+}
+
+/**
+ * Lines that belong to regulatory/informational sections of the package and
+ * should never be treated as the product title.
+ */
+const NON_TITLE_SECTION_PATTERNS: RegExp[] = [
+  /^nutrition( facts| information|al info)?\b/i,
+  /^ingredient(s)?\b/i,
+  /^contains\b|^may contain\b|^allergy advice\b|^best before\b|^use by\b/i,
+  /^net (wt|weight|qty|quantity)\b|^gross weight\b|^mrp\b|^m\.r\.p\b|^batch\b|^mfg\b|^mfd\b|^exp\b|^pincode\b/i,
+  /^address\b|^marketed by\b|^manufactured( by| for)?\b|^packed( by| for)?\b/i,
+  /^keep( away| refrigerated)?\b|^store\b|^warning\b|^directions\b|^serving size\b|^servings?\b/i,
+  /^fssai\b|^lic(ense|ence) no\b|^www\.|^https?:|^customer care\b|^toll free\b/i,
+  /^scan\b|^qr code\b|^flip\b|^back\b|^nutrition per\b|^energy\b|^protein\b|^carbohydrate\b/i,
+  /^total fat\b|^saturated\b|^trans fat\b|^sugar\b|^dietary fib|^sodium\b|^salt\b|^cholesterol\b/i,
+  /^\d+\s*(g|kg|ml|l|pcs|pieces)\b\.?$/i,
+  /^\*+$/,
+];
+
+/** True when a line could plausibly be part of a printed product title. */
+function isCandidateTitleLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.length < 3 || trimmed.length > 48) return false;
+  // Must contain at least two consecutive letters (reject OCR noise & symbols)
+  if (!/[A-Za-z]{2}/.test(trimmed)) return false;
+  // Mostly digits (like "155147" or "70g") is never a title
+  const digits = (trimmed.match(/\d/g) || []).length;
+  if (digits / trimmed.replace(/\s/g, '').length > 0.5) return false;
+  for (const pattern of NON_TITLE_SECTION_PATTERNS) {
+    if (pattern.test(trimmed)) return false;
+  }
+  if (isLikelyGarbageText(trimmed)) return false;
+  return true;
+}
+
+/** Clean a raw OCR title fragment into a presentable product name. */
+function cleanTitleFragment(fragment: string): string {
+  return fragment
+    .replace(/[|\\\/]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s\-–—:,.!•]+|[\s\-–—:,.!•]+$/g, '')
+    .trim();
+}
+
+/**
+ * Extract brand and product name from real OCR text. Evidence-based only:
+ * the brand must appear in the OCR text (matched against the offline brand
+ * lexicon), and the name must come from a plausible printed title line.
+ * Filenames, timestamps, or numeric identifiers are NEVER used here.
+ *
+ * Returns { null, null } when the text supports no confident identification.
+ */
+export function extractBrandAndName(rawText: string): BrandAndName {
+  const normalized = normalizeOcrText(rawText || '');
+  if (!normalized.trim()) return { brand: null, productName: null };
+
+  const lines = normalized.split('\n').map((l) => l.trim());
+
+  // ---- 1. Brand: match the offline lexicon against the whole text. ----
+  let brand: string | null = null;
+  for (const entry of BRAND_LEXICON) {
+    const found = entry.aliases.some((alias) => {
+      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(normalized);
+    });
+    if (found) {
+      brand = entry.display;
+      break;
+    }
+  }
+
+  // ---- 2. Product name: find plausible printed title lines. ----
+  const candidateLines: { line: string; index: number }[] = [];
+  lines.forEach((line, index) => {
+    if (isCandidateTitleLine(line)) candidateLines.push({ line, index });
+  });
+
+  if (candidateLines.length === 0) {
+    return { brand, productName: null };
+  }
+
+  const lowerText = normalized.toLowerCase();
+
+  // Prefer, in order:
+  // (a) a line containing the matched brand,
+  // (b) a line containing a product-type word,
+  // (c) the first candidate lines near the top of the text.
+  const brandLine = brand
+    ? candidateLines.find(({ line }) =>
+        new RegExp(brand!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(line)
+      )
+    : undefined;
+
+  const typeLine = candidateLines.find(({ line }) => {
+    const lower = line.toLowerCase();
+    return PRODUCT_TYPE_WORDS.some((word) =>
+      new RegExp(`(^|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`, 'i').test(lower)
+    );
+  });
+
+  // Multi-line titles: join the chosen line with the immediately adjacent
+  // candidate lines (max 3 lines total, <= 60 chars) when they read as a title.
+  function assembleTitle(primary: { line: string; index: number }): string {
+    const group = [primary.line];
+    for (const cand of candidateLines) {
+      if (group.length >= 3) break;
+      if (cand.index === primary.index) continue;
+      // Only join directly adjacent lines (title lines sit together)
+      const isNeighbor = Math.abs(cand.index - primary.index) <= 1;
+      if (!isNeighbor) continue;
+      const candidateGroup = [...group, cand.line].join(' ').trim();
+      if (candidateGroup.replace(/\s/g, '').length <= 60) {
+        group.push(cand.line);
+      }
+    }
+    return cleanTitleFragment(group.join(' '));
+  }
+
+  let productName: string | null = null;
+  if (brandLine) {
+    productName = assembleTitle(brandLine);
+  } else if (typeLine) {
+    productName = assembleTitle(typeLine);
+  } else {
+    productName = assembleTitle(candidateLines[0]);
+  }
+
+  // Strip a leading brand from the name so brand and name stay separate.
+  // NOTE: the separator class is built from a template literal — the hyphen
+  // MUST be escaped as \\\- so it cannot form a Unicode RANGE like ,-–
+  // (which would swallow every digit and letter and delete the whole title).
+  if (brand && productName) {
+    const brandRegex = new RegExp(
+      `^${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s:,\\-–—]+`,
+      'i'
+    );
+    productName = cleanTitleFragment(productName.replace(brandRegex, ''));
+  }
+
+  // Never return junk: digits-only, tiny fragments, or nutrition echo text.
+  if (productName !== null) {
+    const letters = (productName.match(/[A-Za-z]/g) || []).length;
+    if (
+      productName.trim() === '' ||
+      letters < 3 ||
+      /^[\d\s.]+$/.test(productName) ||
+      (brand && productName.trim().toLowerCase() === brand.toLowerCase())
+    ) {
+      productName = null; // a brand-only line is the brand, not the product name
+    }
+  }
+
+  return { brand, productName };
 }

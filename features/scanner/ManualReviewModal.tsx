@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { NUTRITION_NUMERIC_FIELDS } from '@/features/ocr/merge';
 import { NutritionData, ScanMode, ImageType, ProductAnalysis, ScanImageItem } from '@/types/food';
 import { parseIngredientsText } from '@/features/ocr/parser';
 import { compileProductAnalysis } from '@/features/scoring/engine';
@@ -30,6 +31,14 @@ interface ManualReviewModalProps {
   imagePreviewUrl?: string;
   images?: ScanImageItem[];
   detectionNotes?: string;
+  /** Fields whose readings conflicted across photos — shown for manual review. */
+  conflicts?: string[];
+  /**
+   * Incremented when a new extraction is merged into the initial* props
+   * (e.g. results from an additional photo). Non-dirty fields are refreshed;
+   * fields the user manually edited are never overwritten.
+   */
+  extractionSeq?: number;
   onConfirm: (analyzedProduct: ProductAnalysis) => void;
   onCancel: () => void;
   onAddAnotherPhoto?: (file: File) => void;
@@ -46,6 +55,8 @@ export function ManualReviewModal({
   imagePreviewUrl,
   images = [],
   detectionNotes,
+  conflicts = [],
+  extractionSeq = 0,
   onConfirm,
   onCancel,
   onAddAnotherPhoto,
@@ -57,6 +68,36 @@ export function ManualReviewModal({
   const [claims, setClaims] = useState<string[]>(initialClaims);
   const [newClaimInput, setNewClaimInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Fields the user manually edited — protected from later extractions.
+  const dirtyNutritionRef = useRef<Set<string>>(new Set());
+  const dirtyScalarRef = useRef<Set<string>>(new Set());
+
+  // When a new extraction arrives (extractionSeq changed — e.g. the user added
+  // another photo), refresh only fields the user has NOT manually edited.
+  // User edits always survive; previously extracted evidence is kept.
+  useEffect(() => {
+    if (extractionSeq <= 0) return;
+    setNutrition((prev) => {
+      const next: NutritionData = { ...prev };
+      for (const field of NUTRITION_NUMERIC_FIELDS) {
+        if (!dirtyNutritionRef.current.has(field)) {
+          (next as any)[field] = (initialNutrition as any)[field] ?? null;
+        }
+      }
+      if (!dirtyNutritionRef.current.has('servingSize') && initialNutrition.servingSize) {
+        next.servingSize = initialNutrition.servingSize;
+      }
+      if (!dirtyNutritionRef.current.has('servingsPerContainer')) {
+        next.servingsPerContainer = initialNutrition.servingsPerContainer;
+      }
+      return next;
+    });
+    if (!dirtyScalarRef.current.has('productName')) setProductName(initialProductName);
+    if (!dirtyScalarRef.current.has('brand')) setBrand(initialBrand);
+    if (!dirtyScalarRef.current.has('ingredientsText')) setIngredientsText(initialIngredientsText);
+    if (!dirtyScalarRef.current.has('claims')) setClaims(initialClaims);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extractionSeq]);
 
   // Check if at least some verified data exists
   const hasSomeNutrition =
@@ -95,6 +136,7 @@ export function ManualReviewModal({
 
   // Handle number input with strict null preservation
   const handleNutrientNumberChange = (field: keyof NutritionData, rawVal: string) => {
+    dirtyNutritionRef.current.add(String(field));
     const trimmed = rawVal.trim();
     if (trimmed === '') {
       setNutrition((prev) => ({ ...prev, [field]: null }));
@@ -228,6 +270,25 @@ export function ManualReviewModal({
           )}
         </div>
 
+        {/* Honest detection notes from the OCR pipeline */}
+        {detectionNotes && (
+          <div className="px-6 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-100 dark:border-stone-800 flex items-start gap-2 text-xs text-stone-600 dark:text-stone-400">
+            <HelpCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[#159A6A]" />
+            <span>{detectionNotes}</span>
+          </div>
+        )}
+
+        {/* Cross-photo conflicting readings — flagged for manual review */}
+        {conflicts.length > 0 && (
+          <div className="px-6 py-2.5 bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900/50 flex items-start gap-2 text-xs text-rose-700 dark:text-rose-300">
+            <ShieldAlert className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <span>
+              Conflicting readings between photos for <strong>{conflicts.join(', ')}</strong>.
+              The first detected value was kept — please verify it against the label.
+            </span>
+          </div>
+        )}
+
         {/* Validation Warning Notice if any */}
         {validationWarnings.length > 0 && (
           <div className="px-6 py-2.5 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/50 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
@@ -289,8 +350,11 @@ export function ManualReviewModal({
               <input
                 type="text"
                 value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                placeholder="e.g. Bikaneri Bhujia"
+                onChange={(e) => {
+                  dirtyScalarRef.current.add('productName');
+                  setProductName(e.target.value);
+                }}
+                placeholder="Not detected — e.g. 2-Minute Noodles"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/60 text-sm focus:outline-none focus:ring-2 focus:ring-[#159A6A]"
               />
             </div>
@@ -301,7 +365,10 @@ export function ManualReviewModal({
               <input
                 type="text"
                 value={brand || ''}
-                onChange={(e) => setBrand(e.target.value || null)}
+                onChange={(e) => {
+                  dirtyScalarRef.current.add('brand');
+                  setBrand(e.target.value || null);
+                }}
                 placeholder="e.g. Bikaji"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/60 text-sm focus:outline-none focus:ring-2 focus:ring-[#159A6A]"
               />
@@ -322,7 +389,10 @@ export function ManualReviewModal({
               <input
                 type="text"
                 value={nutrition.servingSize || ''}
-                onChange={(e) => setNutrition((prev) => ({ ...prev, servingSize: e.target.value || null }))}
+                onChange={(e) => {
+                    dirtyNutritionRef.current.add('servingSize');
+                    setNutrition((prev) => ({ ...prev, servingSize: e.target.value || null }));
+                  }}
                 placeholder="Not detected (e.g. 100g or 30g)"
                 className="w-full px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/60 text-sm focus:outline-none focus:ring-1 focus:ring-[#159A6A]"
               />
@@ -416,7 +486,11 @@ export function ManualReviewModal({
             <textarea
               rows={3}
               value={ingredientsText}
-              onChange={(e) => setIngredientsText(e.target.value)}
+              onChange={(e) => {
+                dirtyScalarRef.current.add('ingredientsText');
+                dirtyScalarRef.current.add('ingredientsText');
+                setIngredientsText(e.target.value);
+              }}
               placeholder="e.g. Moth Dal Flour, Besan, Edible Vegetable Oil, Iodised Salt, Spices & Condiments"
               className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900/60 text-sm focus:outline-none focus:ring-2 focus:ring-[#159A6A]"
             />

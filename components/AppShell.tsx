@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { warmUpOcrEngine } from '@/features/ocr/ocr-service';
 import { useSession } from '@/features/session/SessionContext';
 import { HomeView } from '@/features/home/HomeView';
 import { ScanHub } from '@/features/scanner/ScanHub';
@@ -26,6 +27,11 @@ import {
 export type ActiveTab = 'home' | 'scan' | 'report' | 'compare' | 'learn' | 'settings';
 
 export function AppShell() {
+  // Preload the local OCR engine in the background so the first scan
+  // doesn't pay the one-time wasm/language-data download cost.
+  useEffect(() => {
+    warmUpOcrEngine();
+  }, []);
   const { currentScan, setCurrentScan, setCompareScan, clearEntireSession } = useSession();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
