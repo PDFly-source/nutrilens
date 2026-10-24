@@ -1,0 +1,1273 @@
+{
+  "summary": {
+    "model": "food101-mobilenetv2.onnx (shipped asset, onnxruntime-web wasm)",
+    "images_total": 31,
+    "supported_set": {
+      "n": 16,
+      "raw_model_top1": 4,
+      "raw_model_top3": 7,
+      "ground_truth_family_mapped": 8,
+      "per_class": {
+        "samosa": {
+          "n": 1,
+          "top1": 0,
+          "top3": 0
+        },
+        "chow_mein": {
+          "n": 3,
+          "top1": 0,
+          "top3": 0
+        },
+        "fried_rice": {
+          "n": 3,
+          "top1": 2,
+          "top3": 2
+        },
+        "dumplings": {
+          "n": 3,
+          "top1": 0,
+          "top3": 2
+        },
+        "gyoza": {
+          "n": 3,
+          "top1": 1,
+          "top3": 2
+        },
+        "spring_rolls": {
+          "n": 3,
+          "top1": 1,
+          "top3": 1
+        }
+      }
+    },
+    "unsupported_set": {
+      "n": 15,
+      "honest_unknown_rejections": 9,
+      "required_confirmation": 6,
+      "wrongly_auto_routed": 0,
+      "wrong_auto_details": []
+    }
+  },
+  "results": [
+    {
+      "file": "images/samosa_1.jpg",
+      "groundTruth": "samosa",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "fish_and_chips",
+          "score": 0.207
+        },
+        {
+          "cls": "chicken_wings",
+          "score": 0.133
+        },
+        {
+          "cls": "onion_rings",
+          "score": 0.107
+        },
+        {
+          "cls": "samosa",
+          "score": 0.057
+        },
+        {
+          "cls": "spring_rolls",
+          "score": 0.052
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "samosa",
+          "dishId": "samosa",
+          "kind": "direct",
+          "score": 0.057,
+          "rawClass": "samosa"
+        },
+        {
+          "name": "spring rolls",
+          "dishId": "samosa",
+          "kind": "near",
+          "score": 0.052,
+          "rawClass": "spring_rolls"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "Top candidates are close (\"samosa\" vs \"spring rolls\") — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Kerala_samosa.jpg"
+    },
+    {
+      "file": "images/chow_mein_1.jpg",
+      "groundTruth": "chow_mein",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "pad_thai",
+          "score": 0.195
+        },
+        {
+          "cls": "takoyaki",
+          "score": 0.18
+        },
+        {
+          "cls": "pulled_pork_sandwich",
+          "score": 0.177
+        },
+        {
+          "cls": "steak",
+          "score": 0.068
+        },
+        {
+          "cls": "poutine",
+          "score": 0.046
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "pad thai / stir-fried noodles",
+          "dishId": "chowmein",
+          "kind": "near",
+          "score": 0.195,
+          "rawClass": "pad_thai"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"pad thai / stir-fried noodles\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:2016_0624_Tjauw_min_moksie_meti_speciaal.jpg"
+    },
+    {
+      "file": "images/chow_mein_2.jpg",
+      "groundTruth": "chow_mein",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "pad_thai",
+          "score": 0.953
+        },
+        {
+          "cls": "bibimbap",
+          "score": 0.009
+        },
+        {
+          "cls": "fried_rice",
+          "score": 0.005
+        },
+        {
+          "cls": "tacos",
+          "score": 0.004
+        },
+        {
+          "cls": "spaghetti_carbonara",
+          "score": 0.003
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "pad thai / stir-fried noodles",
+          "dishId": "chowmein",
+          "kind": "near",
+          "score": 0.953,
+          "rawClass": "pad_thai"
+        },
+        {
+          "name": "fried rice",
+          "dishId": "plain-rice",
+          "kind": "near",
+          "score": 0.005,
+          "rawClass": "fried_rice"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"pad thai / stir-fried noodles\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:202408191910_IMG_1996.jpg"
+    },
+    {
+      "file": "images/chow_mein_3.jpg",
+      "groundTruth": "chow_mein",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "sashimi",
+          "score": 0.199
+        },
+        {
+          "cls": "pad_thai",
+          "score": 0.16
+        },
+        {
+          "cls": "bibimbap",
+          "score": 0.102
+        },
+        {
+          "cls": "fried_calamari",
+          "score": 0.074
+        },
+        {
+          "cls": "caesar_salad",
+          "score": 0.073
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "pad thai / stir-fried noodles",
+          "dishId": "chowmein",
+          "kind": "near",
+          "score": 0.16,
+          "rawClass": "pad_thai"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"pad thai / stir-fried noodles\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 3.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Bangladeshi_style_home-made_beef_chow_mein.jpg"
+    },
+    {
+      "file": "images/fried_rice_1.jpg",
+      "groundTruth": "fried_rice",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "fried_rice",
+          "score": 0.953
+        },
+        {
+          "cls": "bibimbap",
+          "score": 0.013
+        },
+        {
+          "cls": "pad_thai",
+          "score": 0.012
+        },
+        {
+          "cls": "risotto",
+          "score": 0.008
+        },
+        {
+          "cls": "paella",
+          "score": 0.006
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "fried rice",
+          "dishId": "plain-rice",
+          "kind": "near",
+          "score": 0.953,
+          "rawClass": "fried_rice"
+        },
+        {
+          "name": "pad thai / stir-fried noodles",
+          "dishId": "chowmein",
+          "kind": "near",
+          "score": 0.012,
+          "rawClass": "pad_thai"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"fried rice\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:2020-03-03_18_51_39_Fried_rice_from_the_Vienna,_Virginia-based_Hunan_Delight_Restaurant,_in_the_Franklin_Farm_section_of_Oak_Hill,_Fairfax_County,_Virginia.jpg"
+    },
+    {
+      "file": "images/fried_rice_2.jpg",
+      "groundTruth": "fried_rice",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "pulled_pork_sandwich",
+          "score": 0.108
+        },
+        {
+          "cls": "bibimbap",
+          "score": 0.082
+        },
+        {
+          "cls": "falafel",
+          "score": 0.079
+        },
+        {
+          "cls": "ice_cream",
+          "score": 0.073
+        },
+        {
+          "cls": "carrot_cake",
+          "score": 0.061
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_bilao_of_salted_egg,_seafood,_porkchop_and_fried_rice.jpg"
+    },
+    {
+      "file": "images/fried_rice_3.jpg",
+      "groundTruth": "fried_rice",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "fried_rice",
+          "score": 0.909
+        },
+        {
+          "cls": "risotto",
+          "score": 0.019
+        },
+        {
+          "cls": "pad_thai",
+          "score": 0.017
+        },
+        {
+          "cls": "macaroni_and_cheese",
+          "score": 0.01
+        },
+        {
+          "cls": "chicken_curry",
+          "score": 0.009
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "fried rice",
+          "dishId": "plain-rice",
+          "kind": "near",
+          "score": 0.909,
+          "rawClass": "fried_rice"
+        },
+        {
+          "name": "pad thai / stir-fried noodles",
+          "dishId": "chowmein",
+          "kind": "near",
+          "score": 0.017,
+          "rawClass": "pad_thai"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"fried rice\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_Golden_fried_rice_at_Lunchbox.jpg"
+    },
+    {
+      "file": "images/dumplings_1.jpg",
+      "groundTruth": "dumplings",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "oysters",
+          "score": 0.213
+        },
+        {
+          "cls": "dumplings",
+          "score": 0.114
+        },
+        {
+          "cls": "pho",
+          "score": 0.078
+        },
+        {
+          "cls": "gyoza",
+          "score": 0.065
+        },
+        {
+          "cls": "escargots",
+          "score": 0.038
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "dumplings",
+          "dishId": "momo-steamed",
+          "kind": "near",
+          "score": 0.114,
+          "rawClass": "dumplings"
+        },
+        {
+          "name": "pho / rice noodle soup",
+          "dishId": "instant-noodles-cooked",
+          "kind": "near",
+          "score": 0.078,
+          "rawClass": "pho"
+        },
+        {
+          "name": "gyoza",
+          "dishId": "momo-steamed",
+          "kind": "near",
+          "score": 0.065,
+          "rawClass": "gyoza"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"dumplings\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:201912_Pan-fried_dumplings_and_Fujian_Geng_in_Jinhua.jpg"
+    },
+    {
+      "file": "images/dumplings_2.jpg",
+      "groundTruth": "dumplings",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "scallops",
+          "score": 0.236
+        },
+        {
+          "cls": "ceviche",
+          "score": 0.137
+        },
+        {
+          "cls": "dumplings",
+          "score": 0.083
+        },
+        {
+          "cls": "shrimp_and_grits",
+          "score": 0.073
+        },
+        {
+          "cls": "gyoza",
+          "score": 0.067
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "dumplings",
+          "dishId": "momo-steamed",
+          "kind": "near",
+          "score": 0.083,
+          "rawClass": "dumplings"
+        },
+        {
+          "name": "gyoza",
+          "dishId": "momo-steamed",
+          "kind": "near",
+          "score": 0.067,
+          "rawClass": "gyoza"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"dumplings\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Asian_Dumplings_(Jiaozi)_by_ArmAg.jpg"
+    },
+    {
+      "file": "images/dumplings_3.jpg",
+      "groundTruth": "dumplings",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "cheesecake",
+          "score": 0.11
+        },
+        {
+          "cls": "cannoli",
+          "score": 0.075
+        },
+        {
+          "cls": "oysters",
+          "score": 0.075
+        },
+        {
+          "cls": "donuts",
+          "score": 0.066
+        },
+        {
+          "cls": "nachos",
+          "score": 0.05
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Beef_anf_jiaozi_04-09-2019.jpg"
+    },
+    {
+      "file": "images/gyoza_1.jpg",
+      "groundTruth": "gyoza",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "gyoza",
+          "score": 0.137
+        },
+        {
+          "cls": "takoyaki",
+          "score": 0.126
+        },
+        {
+          "cls": "poutine",
+          "score": 0.093
+        },
+        {
+          "cls": "nachos",
+          "score": 0.088
+        },
+        {
+          "cls": "apple_pie",
+          "score": 0.049
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "gyoza",
+          "dishId": "momo-steamed",
+          "kind": "near",
+          "score": 0.137,
+          "rawClass": "gyoza"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"gyoza\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:10pc_Gyoza_plate.jpg"
+    },
+    {
+      "file": "images/gyoza_2.jpg",
+      "groundTruth": "gyoza",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "cannoli",
+          "score": 0.705
+        },
+        {
+          "cls": "gyoza",
+          "score": 0.204
+        },
+        {
+          "cls": "baklava",
+          "score": 0.034
+        },
+        {
+          "cls": "takoyaki",
+          "score": 0.009
+        },
+        {
+          "cls": "spring_rolls",
+          "score": 0.008
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "gyoza",
+          "dishId": "momo-steamed",
+          "kind": "near",
+          "score": 0.204,
+          "rawClass": "gyoza"
+        },
+        {
+          "name": "spring rolls",
+          "dishId": "samosa",
+          "kind": "near",
+          "score": 0.008,
+          "rawClass": "spring_rolls"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"gyoza\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY 2.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:12_gyozas_@_Gyoza_no_ho_@_Gen%C3%A8ve_(52727245414).jpg"
+    },
+    {
+      "file": "images/gyoza_3.jpg",
+      "groundTruth": "gyoza",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "fish_and_chips",
+          "score": 0.205
+        },
+        {
+          "cls": "french_fries",
+          "score": 0.146
+        },
+        {
+          "cls": "chicken_wings",
+          "score": 0.086
+        },
+        {
+          "cls": "pulled_pork_sandwich",
+          "score": 0.058
+        },
+        {
+          "cls": "baby_back_ribs",
+          "score": 0.049
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:3_pieces_of_Soy-Gyoza,_3_pieces_of_Gimmari,_Appetizer_Pearly_Set.jpg"
+    },
+    {
+      "file": "images/spring_rolls_1.jpg",
+      "groundTruth": "spring_rolls",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "cheese_plate",
+          "score": 0.081
+        },
+        {
+          "cls": "beignets",
+          "score": 0.064
+        },
+        {
+          "cls": "tiramisu",
+          "score": 0.058
+        },
+        {
+          "cls": "red_velvet_cake",
+          "score": 0.045
+        },
+        {
+          "cls": "ice_cream",
+          "score": 0.036
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:11_-_IMG_20150831_101912.jpg"
+    },
+    {
+      "file": "images/spring_rolls_2.jpg",
+      "groundTruth": "spring_rolls",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "spring_rolls",
+          "score": 0.26
+        },
+        {
+          "cls": "cheesecake",
+          "score": 0.162
+        },
+        {
+          "cls": "hot_dog",
+          "score": 0.075
+        },
+        {
+          "cls": "baklava",
+          "score": 0.062
+        },
+        {
+          "cls": "garlic_bread",
+          "score": 0.059
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "spring rolls",
+          "dishId": "samosa",
+          "kind": "near",
+          "score": 0.26,
+          "rawClass": "spring_rolls"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"spring rolls\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:202407171853_IMG_7151.jpg"
+    },
+    {
+      "file": "images/spring_rolls_3.jpg",
+      "groundTruth": "spring_rolls",
+      "setKind": "supported",
+      "top5Raw": [
+        {
+          "cls": "steak",
+          "score": 0.093
+        },
+        {
+          "cls": "cheesecake",
+          "score": 0.088
+        },
+        {
+          "cls": "filet_mignon",
+          "score": 0.073
+        },
+        {
+          "cls": "pork_chop",
+          "score": 0.045
+        },
+        {
+          "cls": "peking_duck",
+          "score": 0.042
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_box_of_small_chops.jpg"
+    },
+    {
+      "file": "images/dal_1.jpg",
+      "groundTruth": "dal",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "bibimbap",
+          "score": 0.184
+        },
+        {
+          "cls": "risotto",
+          "score": 0.135
+        },
+        {
+          "cls": "chicken_curry",
+          "score": 0.084
+        },
+        {
+          "cls": "fried_rice",
+          "score": 0.048
+        },
+        {
+          "cls": "ramen",
+          "score": 0.047
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "fried rice",
+          "dishId": "plain-rice",
+          "kind": "near",
+          "score": 0.048,
+          "rawClass": "fried_rice"
+        },
+        {
+          "name": "ramen noodles",
+          "dishId": "instant-noodles-cooked",
+          "kind": "near",
+          "score": 0.047,
+          "rawClass": "ramen"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"fried rice\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:202408191934_IMG_1998.jpg"
+    },
+    {
+      "file": "images/dal_2.jpg",
+      "groundTruth": "dal",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "hummus",
+          "score": 0.155
+        },
+        {
+          "cls": "guacamole",
+          "score": 0.066
+        },
+        {
+          "cls": "chicken_curry",
+          "score": 0.052
+        },
+        {
+          "cls": "nachos",
+          "score": 0.046
+        },
+        {
+          "cls": "ice_cream",
+          "score": 0.04
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_kind_of_Assamese_veg_thali_with_moog_dal,_Red_dal,_Black_dal_with_elephant_apple,_alloo_sabji,_banana_blosom_sabji,,_couliflower_sabjipumpkin_sabji,_mixed_saag_sabji,_aloo_pitika_..raw_banana_fry_and_cucumbrer_slices.jpg"
+    },
+    {
+      "file": "images/dal_3.jpg",
+      "groundTruth": "dal",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "chocolate_cake",
+          "score": 0.114
+        },
+        {
+          "cls": "cup_cakes",
+          "score": 0.11
+        },
+        {
+          "cls": "donuts",
+          "score": 0.104
+        },
+        {
+          "cls": "macarons",
+          "score": 0.087
+        },
+        {
+          "cls": "sushi",
+          "score": 0.038
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_traditional_Bengali_dish_served_on_a_banana_leaf_surrounded_by_flower_petals.jpg"
+    },
+    {
+      "file": "images/dosa_1.jpg",
+      "groundTruth": "dosa",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "hot_dog",
+          "score": 0.246
+        },
+        {
+          "cls": "spring_rolls",
+          "score": 0.211
+        },
+        {
+          "cls": "baklava",
+          "score": 0.058
+        },
+        {
+          "cls": "sushi",
+          "score": 0.057
+        },
+        {
+          "cls": "sashimi",
+          "score": 0.048
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "spring rolls",
+          "dishId": "samosa",
+          "kind": "near",
+          "score": 0.211,
+          "rawClass": "spring_rolls"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"spring rolls\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:4_feet_Dosa.jpg"
+    },
+    {
+      "file": "images/dosa_2.jpg",
+      "groundTruth": "dosa",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "miso_soup",
+          "score": 0.339
+        },
+        {
+          "cls": "hummus",
+          "score": 0.063
+        },
+        {
+          "cls": "lobster_bisque",
+          "score": 0.058
+        },
+        {
+          "cls": "samosa",
+          "score": 0.052
+        },
+        {
+          "cls": "chicken_quesadilla",
+          "score": 0.05
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "samosa",
+          "dishId": "samosa",
+          "kind": "direct",
+          "score": 0.052,
+          "rawClass": "samosa"
+        }
+      ],
+      "policy": "unknown",
+      "policyReason": "The model had no confident dish match for this photo.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_Crispy_Dosa.jpg"
+    },
+    {
+      "file": "images/dosa_3.jpg",
+      "groundTruth": "dosa",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "creme_brulee",
+          "score": 0.43
+        },
+        {
+          "cls": "apple_pie",
+          "score": 0.076
+        },
+        {
+          "cls": "pancakes",
+          "score": 0.076
+        },
+        {
+          "cls": "macaroni_and_cheese",
+          "score": 0.053
+        },
+        {
+          "cls": "hummus",
+          "score": 0.041
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 2.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_crispy_golden_dosa.jpg"
+    },
+    {
+      "file": "images/idli_1.jpg",
+      "groundTruth": "idli",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "cheesecake",
+          "score": 0.099
+        },
+        {
+          "cls": "ice_cream",
+          "score": 0.07
+        },
+        {
+          "cls": "sushi",
+          "score": 0.057
+        },
+        {
+          "cls": "beignets",
+          "score": 0.053
+        },
+        {
+          "cls": "donuts",
+          "score": 0.05
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:%22Idly%22.jpg"
+    },
+    {
+      "file": "images/idli_2.jpg",
+      "groundTruth": "idli",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "panna_cotta",
+          "score": 0.119
+        },
+        {
+          "cls": "tiramisu",
+          "score": 0.078
+        },
+        {
+          "cls": "cheese_plate",
+          "score": 0.041
+        },
+        {
+          "cls": "chocolate_mousse",
+          "score": 0.04
+        },
+        {
+          "cls": "clam_chowder",
+          "score": 0.037
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_flour_for_idly_making.jpg"
+    },
+    {
+      "file": "images/idli_3.jpg",
+      "groundTruth": "idli",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "spring_rolls",
+          "score": 0.163
+        },
+        {
+          "cls": "dumplings",
+          "score": 0.108
+        },
+        {
+          "cls": "macarons",
+          "score": 0.044
+        },
+        {
+          "cls": "hot_dog",
+          "score": 0.035
+        },
+        {
+          "cls": "ramen",
+          "score": 0.03
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "spring rolls",
+          "dishId": "samosa",
+          "kind": "near",
+          "score": 0.163,
+          "rawClass": "spring_rolls"
+        },
+        {
+          "name": "dumplings",
+          "dishId": "momo-steamed",
+          "kind": "near",
+          "score": 0.108,
+          "rawClass": "dumplings"
+        },
+        {
+          "name": "ramen noodles",
+          "dishId": "instant-noodles-cooked",
+          "kind": "near",
+          "score": 0.03,
+          "rawClass": "ramen"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"spring rolls\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_Handful_of_Southern_India_Cusine.jpg"
+    },
+    {
+      "file": "images/chapati_1.jpg",
+      "groundTruth": "chapati",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "ice_cream",
+          "score": 0.216
+        },
+        {
+          "cls": "macarons",
+          "score": 0.102
+        },
+        {
+          "cls": "frozen_yogurt",
+          "score": 0.063
+        },
+        {
+          "cls": "donuts",
+          "score": 0.053
+        },
+        {
+          "cls": "churros",
+          "score": 0.037
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:1st_Roti_Machine_Design_2013.jpg"
+    },
+    {
+      "file": "images/chapati_2.jpg",
+      "groundTruth": "chapati",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "tiramisu",
+          "score": 0.142
+        },
+        {
+          "cls": "hummus",
+          "score": 0.135
+        },
+        {
+          "cls": "pancakes",
+          "score": 0.125
+        },
+        {
+          "cls": "macarons",
+          "score": 0.058
+        },
+        {
+          "cls": "cheese_plate",
+          "score": 0.04
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 2.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:2_Chapati_warm_and_ready_to_be_eaten.jpg"
+    },
+    {
+      "file": "images/chapati_3.jpg",
+      "groundTruth": "chapati",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "chicken_quesadilla",
+          "score": 0.194
+        },
+        {
+          "cls": "hummus",
+          "score": 0.173
+        },
+        {
+          "cls": "lasagna",
+          "score": 0.052
+        },
+        {
+          "cls": "clam_chowder",
+          "score": 0.047
+        },
+        {
+          "cls": "breakfast_burrito",
+          "score": 0.041
+        }
+      ],
+      "mappedCandidates": [],
+      "policy": "unknown",
+      "policyReason": "No dish candidate was mapped from the model output.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:2020-05-08_19_30_21_Chapati_in_the_Franklin_Farm_section_of_Oak_Hill,_Fairfax_County,_Virginia.jpg"
+    },
+    {
+      "file": "images/biryani_1.jpg",
+      "groundTruth": "biryani",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "pulled_pork_sandwich",
+          "score": 0.274
+        },
+        {
+          "cls": "baby_back_ribs",
+          "score": 0.153
+        },
+        {
+          "cls": "pad_thai",
+          "score": 0.106
+        },
+        {
+          "cls": "chicken_curry",
+          "score": 0.072
+        },
+        {
+          "cls": "paella",
+          "score": 0.04
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "pad thai / stir-fried noodles",
+          "dishId": "chowmein",
+          "kind": "near",
+          "score": 0.106,
+          "rawClass": "pad_thai"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"pad thai / stir-fried noodles\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:10858597_764256463622777_7073638915757750139_n.mv.jpg"
+    },
+    {
+      "file": "images/biryani_2.jpg",
+      "groundTruth": "biryani",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "paella",
+          "score": 0.1
+        },
+        {
+          "cls": "fried_rice",
+          "score": 0.095
+        },
+        {
+          "cls": "donuts",
+          "score": 0.078
+        },
+        {
+          "cls": "bibimbap",
+          "score": 0.066
+        },
+        {
+          "cls": "pulled_pork_sandwich",
+          "score": 0.054
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "fried rice",
+          "dishId": "plain-rice",
+          "kind": "near",
+          "score": 0.095,
+          "rawClass": "fried_rice"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"fried rice\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:263479-special-biryani-at-tunday.jpg"
+    },
+    {
+      "file": "images/biryani_3.jpg",
+      "groundTruth": "biryani",
+      "setKind": "unsupported",
+      "top5Raw": [
+        {
+          "cls": "pad_thai",
+          "score": 0.42
+        },
+        {
+          "cls": "fried_rice",
+          "score": 0.221
+        },
+        {
+          "cls": "bibimbap",
+          "score": 0.157
+        },
+        {
+          "cls": "spaghetti_bolognese",
+          "score": 0.046
+        },
+        {
+          "cls": "pulled_pork_sandwich",
+          "score": 0.022
+        }
+      ],
+      "mappedCandidates": [
+        {
+          "name": "pad thai / stir-fried noodles",
+          "dishId": "chowmein",
+          "kind": "near",
+          "score": 0.42,
+          "rawClass": "pad_thai"
+        },
+        {
+          "name": "fried rice",
+          "dishId": "plain-rice",
+          "kind": "near",
+          "score": 0.221,
+          "rawClass": "fried_rice"
+        }
+      ],
+      "policy": "confirm",
+      "policyReason": "\"pad thai / stir-fried noodles\" is a close relative of the preselected dish, not a verified identification — please confirm.",
+      "licence": "CC BY-SA 4.0",
+      "source_url": "https://commons.wikimedia.org/wiki/File:A_Biryani.jpg"
+    }
+  ]
+}

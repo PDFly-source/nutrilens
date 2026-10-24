@@ -80,6 +80,16 @@ const M: Record<string, Food101Mapping> = {
     kind: 'near',
     note: 'The model sees fried spring rolls — samosa is our closest dish nutritionally (fried pastry with savoury filling).',
   },
+  // Added in 2.4 after the real-image evaluation (docs/real-image-eval-2.4.md):
+  // Indian street chow mein photos frequently score as pad_thai. Pad thai is a
+  // stir-fried noodle dish; chowmein is our closest dish family. Near-mapping
+  // rules apply: user confirmation required, oil/sauce flagged as unknown.
+  pad_thai: {
+    dishId: 'chowmein',
+    observedName: 'pad thai / stir-fried noodles',
+    kind: 'near',
+    note: 'The model sees stir-fried noodles — our closest entry is chowmein; sauce and oil quantity still need your confirmation.',
+  },
 };
 
 export function mapFood101Class(cls: string): Food101Mapping | null {

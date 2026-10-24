@@ -1,0 +1,312 @@
+[
+  {
+    "file": "images/samosa_1.jpg",
+    "label": "samosa",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Kerala_samosa.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4c/Kerala_samosa.jpg/960px-Kerala_samosa.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "Vis M",
+    "category": "Category:Samosa"
+  },
+  {
+    "file": "images/chow_mein_1.jpg",
+    "label": "chow_mein",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2016_0624_Tjauw_min_moksie_meti_speciaal.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/2016_0624_Tjauw_min_moksie_meti_speciaal.jpg/960px-2016_0624_Tjauw_min_moksie_meti_speciaal.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Takeaway\" title=\"User:Takeaway\">Takeaway</a>",
+    "category": "Category:Chow mein"
+  },
+  {
+    "file": "images/chow_mein_2.jpg",
+    "label": "chow_mein",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:202408191910_IMG_1996.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/67/202408191910_IMG_1996.jpg/960px-202408191910_IMG_1996.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:%E3%82%A6%E3%82%A3%E8%B2%B4%E5%85%AC%E5%AD%90\" title=\"User:\u30a6\u30a3\u8cb4\u516c\u5b50\">\u30a6\u30a3\u8cb4\u516c\u5b50</a>",
+    "category": "Category:Chow mein"
+  },
+  {
+    "file": "images/chow_mein_3.jpg",
+    "label": "chow_mein",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Bangladeshi_style_home-made_beef_chow_mein.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/Bangladeshi_style_home-made_beef_chow_mein.jpg/960px-Bangladeshi_style_home-made_beef_chow_mein.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 3.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Ibrahim_Husain_Meraj\" title=\"User:Ibrahim Husain Meraj\">Ibrahim Husain Meraj<",
+    "category": "Category:Chow mein"
+  },
+  {
+    "file": "images/fried_rice_1.jpg",
+    "label": "fried_rice",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2020-03-03_18_51_39_Fried_rice_from_the_Vienna,_Virginia-based_Hunan_Delight_Restaurant,_in_the_Franklin_Farm_section_of_Oak_Hill,_Fairfax_County,_Virginia.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/2020-03-03_18_51_39_Fried_rice_from_the_Vienna%2C_Virginia-based_Hunan_Delight_Restaurant%2C_in_the_Franklin_Farm_section_of_Oak_Hill%2C_Fairfax_County%2C_Virginia.jpg/960px-2020-03-03_18_51_39_Fried_rice_from_the_Vienna%2C_Virginia-based_Hunan_Delight_Restaurant%2C_in_the_Franklin_Farm_section_of_Oak_Hill%2C_Fairfax_County%2C_Virginia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Famartin\" title=\"User:Famartin\">Famartin</a>",
+    "category": "Category:Fried rice"
+  },
+  {
+    "file": "images/fried_rice_2.jpg",
+    "label": "fried_rice",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_bilao_of_salted_egg,_seafood,_porkchop_and_fried_rice.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/A_bilao_of_salted_egg%2C_seafood%2C_porkchop_and_fried_rice.jpg/960px-A_bilao_of_salted_egg%2C_seafood%2C_porkchop_and_fried_rice.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Filipinayzd\" title=\"User:Filipinayzd\">Irvin Parco Sto. Tomas</a>",
+    "category": "Category:Fried rice"
+  },
+  {
+    "file": "images/fried_rice_3.jpg",
+    "label": "fried_rice",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_Golden_fried_rice_at_Lunchbox.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b6/A_Golden_fried_rice_at_Lunchbox.jpg/960px-A_Golden_fried_rice_at_Lunchbox.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Peachyeung316\" title=\"User:Peachyeung316\">Peachyeung316</a>",
+    "category": "Category:Fried rice"
+  },
+  {
+    "file": "images/dumplings_1.jpg",
+    "label": "dumplings",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:201912_Pan-fried_dumplings_and_Fujian_Geng_in_Jinhua.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/201912_Pan-fried_dumplings_and_Fujian_Geng_in_Jinhua.jpg/960px-201912_Pan-fried_dumplings_and_Fujian_Geng_in_Jinhua.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:MNXANL\" title=\"User:MNXANL\">MNXANL</a>",
+    "category": "Category:Jiaozi"
+  },
+  {
+    "file": "images/dumplings_2.jpg",
+    "label": "dumplings",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Asian_Dumplings_(Jiaozi)_by_ArmAg.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/Asian_Dumplings_%28Jiaozi%29_by_ArmAg.jpg/960px-Asian_Dumplings_%28Jiaozi%29_by_ArmAg.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Armineaghayan\" title=\"User:Armineaghayan\">Armineaghayan</a>",
+    "category": "Category:Jiaozi"
+  },
+  {
+    "file": "images/dumplings_3.jpg",
+    "label": "dumplings",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Beef_anf_jiaozi_04-09-2019.jpg",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/9/93/Beef_anf_jiaozi_04-09-2019.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:LN9267\" title=\"User:LN9267\">LN9267</a>",
+    "category": "Category:Jiaozi"
+  },
+  {
+    "file": "images/gyoza_1.jpg",
+    "label": "gyoza",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:10pc_Gyoza_plate.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d2/10pc_Gyoza_plate.jpg/960px-10pc_Gyoza_plate.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Wesoree\" title=\"User:Wesoree\">Wesoree</a>",
+    "category": "Category:Gyoza"
+  },
+  {
+    "file": "images/gyoza_2.jpg",
+    "label": "gyoza",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:12_gyozas_@_Gyoza_no_ho_@_Gen%C3%A8ve_(52727245414).jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/12_gyozas_%40_Gyoza_no_ho_%40_Gen%C3%A8ve_%2852727245414%29.jpg/960px-12_gyozas_%40_Gyoza_no_ho_%40_Gen%C3%A8ve_%2852727245414%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY 2.0",
+    "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/22539273@N00\">Guilhem Vellut</a> from Annecy",
+    "category": "Category:Gyoza"
+  },
+  {
+    "file": "images/gyoza_3.jpg",
+    "label": "gyoza",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:3_pieces_of_Soy-Gyoza,_3_pieces_of_Gimmari,_Appetizer_Pearly_Set.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/3_pieces_of_Soy-Gyoza%2C_3_pieces_of_Gimmari%2C_Appetizer_Pearly_Set.jpg/960px-3_pieces_of_Soy-Gyoza%2C_3_pieces_of_Gimmari%2C_Appetizer_Pearly_Set.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Amaeka_Lyrae_Loremas_Cabaccang&amp;action=edit&amp;redlink=1\" cl",
+    "category": "Category:Gyoza"
+  },
+  {
+    "file": "images/spring_rolls_1.jpg",
+    "label": "spring_rolls",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:11_-_IMG_20150831_101912.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d2/11_-_IMG_20150831_101912.jpg/960px-11_-_IMG_20150831_101912.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:KangaJpn&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:",
+    "category": "Category:Spring rolls"
+  },
+  {
+    "file": "images/spring_rolls_2.jpg",
+    "label": "spring_rolls",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:202407171853_IMG_7151.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/202407171853_IMG_7151.jpg/960px-202407171853_IMG_7151.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:%E3%82%A6%E3%82%A3%E8%B2%B4%E5%85%AC%E5%AD%90\" title=\"User:\u30a6\u30a3\u8cb4\u516c\u5b50\">\u30a6\u30a3\u8cb4\u516c\u5b50</a>",
+    "category": "Category:Spring rolls"
+  },
+  {
+    "file": "images/spring_rolls_3.jpg",
+    "label": "spring_rolls",
+    "kind": "supported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_box_of_small_chops.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/A_box_of_small_chops.jpg/960px-A_box_of_small_chops.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Maame1Yaa&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User",
+    "category": "Category:Spring rolls"
+  },
+  {
+    "file": "images/dal_1.jpg",
+    "label": "dal",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:202408191934_IMG_1998.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/22/202408191934_IMG_1998.jpg/960px-202408191934_IMG_1998.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:%E3%82%A6%E3%82%A3%E8%B2%B4%E5%85%AC%E5%AD%90\" title=\"User:\u30a6\u30a3\u8cb4\u516c\u5b50\">\u30a6\u30a3\u8cb4\u516c\u5b50</a>",
+    "category": "Category:Dal"
+  },
+  {
+    "file": "images/dal_2.jpg",
+    "label": "dal",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_kind_of_Assamese_veg_thali_with_moog_dal,_Red_dal,_Black_dal_with_elephant_apple,_alloo_sabji,_banana_blosom_sabji,,_couliflower_sabjipumpkin_sabji,_mixed_saag_sabji,_aloo_pitika_..raw_banana_fry_and_cucumbrer_slices.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/A_kind_of_Assamese_veg_thali_with_moog_dal%2C_Red_dal%2C_Black_dal_with_elephant_apple%2C_alloo_sabji%2C_banana_blosom_sabji%2C%2C_couliflower_sabjipumpkin_sabji%2C_mixed_saag_sabji%2C_aloo_pitika_..raw_banana_fry_and_cucumbrer_slices.jpg/960px-thumbnail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Chiring_chandan\" title=\"User:Chiring chandan\">Chiring chandan</a>",
+    "category": "Category:Dal"
+  },
+  {
+    "file": "images/dal_3.jpg",
+    "label": "dal",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_traditional_Bengali_dish_served_on_a_banana_leaf_surrounded_by_flower_petals.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/08/A_traditional_Bengali_dish_served_on_a_banana_leaf_surrounded_by_flower_petals.jpg/960px-A_traditional_Bengali_dish_served_on_a_banana_leaf_surrounded_by_flower_petals.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Antik_Jana&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"Use",
+    "category": "Category:Dal"
+  },
+  {
+    "file": "images/dosa_1.jpg",
+    "label": "dosa",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:4_feet_Dosa.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/4_feet_Dosa.jpg/960px-4_feet_Dosa.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Harshmander_Rastogi&amp;action=edit&amp;redlink=1\" class=\"new\" t",
+    "category": "Category:Dosa"
+  },
+  {
+    "file": "images/dosa_2.jpg",
+    "label": "dosa",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_Crispy_Dosa.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2f/A_Crispy_Dosa.jpg/960px-A_Crispy_Dosa.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Smart_Specky&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"U",
+    "category": "Category:Dosa"
+  },
+  {
+    "file": "images/dosa_3.jpg",
+    "label": "dosa",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_crispy_golden_dosa.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/A_crispy_golden_dosa.jpg/960px-A_crispy_golden_dosa.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 2.0",
+    "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/75531279@N05\">Devika</a>",
+    "category": "Category:Dosa"
+  },
+  {
+    "file": "images/idli_1.jpg",
+    "label": "idli",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:%22Idly%22.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/%22Idly%22.jpg/960px-%22Idly%22.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Thamizhpparithi_Maari\" title=\"User:Thamizhpparithi Maari\">Thamizhpparithi Maa",
+    "category": "Category:Idli"
+  },
+  {
+    "file": "images/idli_2.jpg",
+    "label": "idli",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_flour_for_idly_making.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/A_flour_for_idly_making.jpg/960px-A_flour_for_idly_making.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a rel=\"mw:WikiLink\" href=\"https://commons.wikimedia.org/wiki/User:Thamizhpparithi_Maari\" title=\"User:Thamizhpparithi Ma",
+    "category": "Category:Idli"
+  },
+  {
+    "file": "images/idli_3.jpg",
+    "label": "idli",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_Handful_of_Southern_India_Cusine.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/A_Handful_of_Southern_India_Cusine.jpg/960px-A_Handful_of_Southern_India_Cusine.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:AhonaMukherjee&amp;action=edit&amp;redlink=1\" class=\"new\" title=",
+    "category": "Category:Idli"
+  },
+  {
+    "file": "images/chapati_1.jpg",
+    "label": "chapati",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:1st_Roti_Machine_Design_2013.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/1st_Roti_Machine_Design_2013.jpg/960px-1st_Roti_Machine_Design_2013.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Jmadhikary&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"Use",
+    "category": "Category:Chapati"
+  },
+  {
+    "file": "images/chapati_2.jpg",
+    "label": "chapati",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2_Chapati_warm_and_ready_to_be_eaten.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/2_Chapati_warm_and_ready_to_be_eaten.jpg/960px-2_Chapati_warm_and_ready_to_be_eaten.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 2.0",
+    "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/78962213@N00\">KittyKaht</a> from Hong Kong, ",
+    "category": "Category:Chapati"
+  },
+  {
+    "file": "images/chapati_3.jpg",
+    "label": "chapati",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2020-05-08_19_30_21_Chapati_in_the_Franklin_Farm_section_of_Oak_Hill,_Fairfax_County,_Virginia.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1c/2020-05-08_19_30_21_Chapati_in_the_Franklin_Farm_section_of_Oak_Hill%2C_Fairfax_County%2C_Virginia.jpg/960px-2020-05-08_19_30_21_Chapati_in_the_Franklin_Farm_section_of_Oak_Hill%2C_Fairfax_County%2C_Virginia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Famartin\" title=\"User:Famartin\">Famartin</a>",
+    "category": "Category:Chapati"
+  },
+  {
+    "file": "images/biryani_1.jpg",
+    "label": "biryani",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:10858597_764256463622777_7073638915757750139_n.mv.jpg",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/c/cf/10858597_764256463622777_7073638915757750139_n.mv.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Abrs.ulab&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User",
+    "category": "Category:Biryani"
+  },
+  {
+    "file": "images/biryani_2.jpg",
+    "label": "biryani",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:263479-special-biryani-at-tunday.jpg",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/4/43/263479-special-biryani-at-tunday.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Mohitextreme&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"U",
+    "category": "Category:Biryani"
+  },
+  {
+    "file": "images/biryani_3.jpg",
+    "label": "biryani",
+    "kind": "unsupported",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_Biryani.jpg",
+    "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/A_Biryani.jpg/960px-A_Biryani.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "licence": "CC BY-SA 4.0",
+    "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Oleg_Yunakov&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"U",
+    "category": "Category:Biryani"
+  }
+]
