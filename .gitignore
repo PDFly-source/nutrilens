@@ -5,3 +5,13 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Next.js build output
+.next/
+out/
+.pages-export-tmp/
+
+# Environment
+.env
+.env.local
+.env*.local

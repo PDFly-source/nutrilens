@@ -30,6 +30,8 @@ import {
 interface ReportDashboardProps {
   analysis: ProductAnalysis;
   onScanAnother: () => void;
+  /** Optional: rescan the back panel of the package. Falls back to onScanAnother. */
+  onScanBackPanel?: () => void;
   onCompare: () => void;
   onExport: () => void;
   onShare: () => void;
@@ -38,10 +40,13 @@ interface ReportDashboardProps {
 export function ReportDashboard({
   analysis,
   onScanAnother,
+  onScanBackPanel,
   onCompare,
   onExport,
   onShare,
 }: ReportDashboardProps) {
+  // The back-panel rescan action mirrors "scan another" when not customized.
+  const handleScanBackPanel = onScanBackPanel ?? onScanAnother;
   const { preferenceResults } = useSession();
 
   // Serving multiplier calculator state

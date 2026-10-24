@@ -107,9 +107,15 @@ export async function analyzePackagedFoodImage(
         const parsedIngs = parseIngredientsText(rawIngText);
 
         // Merge detected allergens from vision if any
-        const combinedAllergens = Array.from(
-          new Set([...(d.allergens || []), ...parsedIngs.detectedAllergens])
+        // Allergens flagged by the ingredient parser live on each parsed item.
+        const parsedAllergens = Array.from(
+          new Set(
+            parsedIngs.items
+              .map((item) => item.allergenDetected)
+              .filter((a): a is string => Boolean(a))
+          )
         );
+        // Allergen detection is handled by the scoring engine from parsed items.
 
         const productName =
           d.productName && d.productName !== 'Unknown'
@@ -122,11 +128,9 @@ export async function analyzePackagedFoodImage(
           scanMode: mode,
           productName,
           brand: d.brand,
-          category: d.category,
-          flavorVariant: d.flavorVariant,
+          productVariant: d.flavorVariant,
           packageSize: d.packageSize,
           imageType,
-          imageTypeLabel,
           nutritionConfidence: d.nutritionConfidence || (safeNutrition.calories !== null ? 'high' : 'not_present'),
           detectionNotes: d.detectionNotes,
           barcode: d.barcode || undefined,
@@ -134,7 +138,6 @@ export async function analyzePackagedFoodImage(
           ingredients: parsedIngs.items,
           rawIngredientsText: rawIngText,
           detectedClaims: d.marketingClaims || [],
-          allergensOverride: combinedAllergens,
           imagePreviewUrl: base64Data,
         });
 
@@ -169,7 +172,7 @@ export async function analyzePackagedFoodImage(
     rawText = '';
   }
 
-  const detectedType = detectImageTypeFromText(rawText);
+  const detectedType: ImageType = detectImageTypeFromText(rawText);
   const parsedNutrition = parseNutritionText(rawText);
   const parsedIngredients = parseIngredientsText(rawText);
   const claims = detectMarketingClaimsFromText(rawText);
@@ -184,27 +187,35 @@ export async function analyzePackagedFoodImage(
   const analysis = compileProductAnalysis({
     scanMode: mode,
     productName: fallbackProductName,
-    imageType: detectedType.type,
-    imageTypeLabel: detectedType.label,
-    nutritionConfidence: parsedNutrition.calories !== null ? 'partial' : 'not_present',
-    detectionNotes: detectedType.notes,
+    imageType: detectedType,
+    nutritionConfidence: parsedNutrition.calories !== null ? 'low' : 'none',
+    detectionNotes:
+      parsedNutrition.calories !== null
+        ? 'Extracted via on-device OCR from the captured image.'
+        : 'No nutrition values could be read from this image.',
     nutrition: parsedNutrition,
     ingredients: parsedIngredients.items,
     rawIngredientsText: parsedIngredients.cleanRawList || rawText,
     detectedClaims: claims,
-    allergensOverride: parsedIngredients.detectedAllergens,
     imagePreviewUrl: base64Data,
   });
 
   const isFrontPackageOnly =
-    detectedType.type === 'front_package' &&
+    detectedType === 'front_package' &&
     parsedNutrition.calories === null;
 
   return {
     analysis,
-    imageType: detectedType.type,
-    imageTypeLabel: detectedType.label,
-    notes: detectedType.notes,
+    imageType: detectedType,
+    imageTypeLabel:
+      detectedType === 'front_package' ? 'Front Packaging / Product Photo' :
+      detectedType === 'nutrition_label' ? 'Nutrition Facts Panel' :
+      detectedType === 'ingredients_label' ? 'Ingredients Statement' :
+      detectedType === 'barcode' ? 'Barcode' : 'Full Packaging',
+    notes:
+      parsedNutrition.calories !== null
+        ? 'Extracted via on-device OCR from the captured image.'
+        : 'No nutrition values could be read from this image.',
     isFrontPackageOnly,
   };
 }

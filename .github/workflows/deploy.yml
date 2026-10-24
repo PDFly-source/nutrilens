@@ -1,0 +1,63 @@
+# NutriLens — GitHub Pages production deployment.
+# GitHub is the source of truth for the deployed website.
+#
+# Static export of the Next.js app is produced by scripts/build-pages.mjs
+# (temporarily excludes app/api, which cannot run on a static host) and the
+# app falls back to its built-in on-device OCR pipeline when the server-side
+# Gemini vision route is unavailable.
+name: Deploy NutriLens to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least-privilege permissions required by official GitHub Pages actions.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one deployment at a time; do not cancel in-flight runs.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build static export
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build production static export
+        run: npm run build:pages
+        env:
+          NEXT_OUTPUT: export
+          NEXT_PUBLIC_BASE_PATH: /nutrilens
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
