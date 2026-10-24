@@ -1,5 +1,7 @@
 'use client';
 
+import { APP_VERSION, COMMIT_SHA, buildLabel } from '@/lib/build-info';
+
 import React, { useState, useEffect } from 'react';
 import { useSession } from '@/features/session/SessionContext';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
@@ -310,7 +312,11 @@ export function SettingsView({ onClearSession }: SettingsViewProps) {
       {/* About Section */}
       <div className="p-6 rounded-3xl bg-stone-50 dark:bg-[#1A211D] border border-stone-200/60 dark:border-stone-800 text-xs text-stone-500 space-y-1.5">
         <div className="font-semibold text-stone-700 dark:text-stone-300">
-          NutriLens · SCAN. KNOW. CHOOSE. (Version 1.0.0 PWA)
+          NutriLens · SCAN. KNOW. CHOOSE. (Version {APP_VERSION} PWA)
+        </div>
+        <div className="text-[11px] text-stone-400 dark:text-stone-500">
+          Running build: {buildLabel()}
+          {COMMIT_SHA === 'dev' && ' — local development build (no git commit)'}
         </div>
         <p>
           Informational food-label intelligence tool. Does not diagnose diseases or provide medical diagnosis.

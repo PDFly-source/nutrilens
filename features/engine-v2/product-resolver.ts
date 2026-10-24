@@ -11,6 +11,8 @@
  */
 
 import { BRAND_LEXICON } from '@/data/brand-lexicon';
+import { isPlausibleProductTitle } from '@/features/ocr/parser';
+import { isLikelyGarbageText } from '@/features/ocr/garbage-filter';
 
 export interface ResolvedProduct {
   brand: string | null;
@@ -123,6 +125,13 @@ export function resolveProduct(ocrText: string): ResolvedProduct {
     title = withFlavour.title || null;
     flavour = withFlavour.flavour;
     if (brand && title && title.toLowerCase() === brand.toLowerCase()) title = null;
+    // v2.4.1: OCR junk ("A Naha ai BR RA a ge", "She") must never become a
+    // product title. Legitimate short brand names still pass the lexicon
+    // rule inside isPlausibleProductTitle.
+    if (title !== null && !isPlausibleProductTitle(title)) {
+      title = null;
+      flavour = null;
+    }
   }
 
   return {

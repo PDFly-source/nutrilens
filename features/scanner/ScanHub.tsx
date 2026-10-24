@@ -7,10 +7,10 @@ import { ManualReviewModal } from '@/features/scanner/ManualReviewModal';
 import { CookedReviewModal } from '@/features/scanner/CookedReviewModal';
 import { FieldEvidenceMap } from '@/features/engine-v2/types';
 import { capabilitySummary } from '@/features/engine-v2/vision-provider';
-import { browserClassifyCooked } from '@/features/engine-v2/browser-vision';
-import { classifyConfidence } from '@/features/engine-v2/confidence-policy';
+import { browserClassifyCooked, watchVisionStatus, ModelDownloadError, ImageDecodeError, InferenceError } from '@/features/engine-v2/browser-vision';
+import { decideVisionRoute, decidePackagedRoute } from '@/features/scanner/scan-routing';
+import { scanHubNotice } from '@/lib/build-info';
 import { DishCandidate } from '@/features/engine-v2/vision-mapping';
-import { findDishes, getDishById } from '@/features/engine-v2/cooked/dishes';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { analyzeFoodImages } from '@/features/ocr/unified-analyzer';
 import { mergeNutritionData, describeConflicts, mergeReviewFields } from '@/features/ocr/merge';
@@ -85,6 +85,11 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
   const [visionCandidates, setVisionCandidates] = useState<DishCandidate[] | undefined>(undefined);
   const [visionVisible, setVisionVisible] = useState<string[] | undefined>(undefined);
   const [visionPortionG, setVisionPortionG] = useState<number | null | undefined>(undefined);
+  // v2.4.1: honest model-failure state — retry or explicit user choice, never
+  // a silent packaged-OCR fallback that misreads cooked food as a package.
+  const [modelError, setModelError] = useState<{ message: string; files: File[] } | null>(null);
+  // v2.4.1: what the model saw (shown on the ambiguity card as a hint).
+  const [visionHint, setVisionHint] = useState<DishCandidate[] | null>(null);
 
   // Trigger analysis on an array of files
   const runFileAnalysis = async (files: File[], mode: ScanMode = 'nutrition') => {
@@ -92,41 +97,67 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
 
     // v2: explicit cooked-food route skips the label pipeline entirely.
     if (routeMode === 'cooked') {
+      setVisionHint(null);
+      setVisionCandidates(undefined);
       setCookedFiles(files);
       return;
     }
 
     // v2.2: automatic recognition — ALWAYS available, no API key needed. The
     // on-device Food-101 model classifies BEFORE the heavy packaged OCR
-    // pipeline and routes cooked food directly. Model download/inference
-    // failure → honest packaged pipeline with no invented routing.
+    // pipeline and routes cooked food directly.
+    //
+    // v2.4.1 (forensic-audit fix): model load/inference failure is NO LONGER
+    // a silent packaged-OCR fallback — that path misrouted cooked food into
+    // the packaged form ("She", "Front Package Detected"). The user now sees
+    // an honest error with retry and an explicit route choice. Weak/unknown
+    // vision evidence continues into OCR, but the packaged form only opens
+    // with REAL packaging evidence (see decidePackagedRoute below).
     if (routeMode === 'auto') {
       setIsAnalyzing(true);
+      setModelError(null);
       setAnalysisStage('Identifying the food with the on-device model...');
       setAnalysisPercent(10);
+      // Surface the one-time ~9.4 MB model download honestly.
+      const unsubscribe = watchVisionStatus((st) => {
+        if (st.state === 'downloading') {
+          const pct = st.total ? Math.min(0.9, st.received / st.total) : 0.3;
+          setAnalysisStage(
+            st.total
+              ? `Downloading the recognition model (${(st.received / 1024 / 1024).toFixed(1)} of ${(st.total / 1024 / 1024).toFixed(1)} MB — one time only)...`
+              : 'Downloading the recognition model (one time only)...'
+          );
+          setAnalysisPercent(10 + Math.round(pct * 35));
+        }
+      });
       try {
         const res = await browserClassifyCooked(files[0]);
-        const ranked = res.candidates;
-        const matched = ranked.filter((c) => (c.dishId ? getDishById(c.dishId) : findDishes(c.name).length > 0));
-        // v2.3: the tested confidence policy decides whether this evidence
-        // is strong enough to route to the cooked flow at all.
-        const policy = classifyConfidence(matched);
-        if (matched.length > 0 && policy.decision !== 'unknown') {
+        const decision = decideVisionRoute({ candidates: res.candidates });
+        if (decision.route === 'cooked') {
+          unsubscribe();
           setIsAnalyzing(false);
-          setVisionCandidates(matched);
+          setVisionHint(null);
+          setVisionCandidates(decision.candidates);
           setVisionVisible(res.visibleIngredients);
           setVisionPortionG(res.portionEstimateG);
           setCookedFiles(files);
           return;
         }
-        // No dish matched (e.g. dal/curry — no Food-101 class, or a packaged
-        // product). If the model was weakly confident overall this is likely
-        // a label/package → continue into the packaged OCR pipeline below.
-      } catch {
-        // Model not downloaded / offline / inference error — continue with
-        // the packaged pipeline honestly. The cooked flow remains reachable
-        // via the explicit "Cooked dish" scan type.
+        // Weak/unknown vision evidence: keep the model's view as a HINT for
+        // the ambiguity card, then let the packaged OCR try (it may find a
+        // real label). The gate below decides whether that is enough.
+        setVisionHint(res.candidates.length > 0 ? res.candidates : null);
+      } catch (err) {
+        unsubscribe();
+        setIsAnalyzing(false);
+        const message =
+          err instanceof ModelDownloadError || err instanceof InferenceError || err instanceof ImageDecodeError
+            ? err.message
+            : 'On-device recognition could not run. Check your connection and retry, or choose a scan type below.';
+        setModelError({ message, files });
+        return;
       }
+      unsubscribe();
       setIsAnalyzing(false);
     }
 
@@ -147,19 +178,16 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
         setAnalysisPercent(pct);
       });
 
-      // v2: AUTO mode ambiguity gate — when we found NO readable label text,
-      // NO ingredients and NO barcode, the image type is unknown. Never force
-      // a packaged-food analysis; ask the user instead.
-      const noEvidence =
-        !result.productName &&
-        !result.ingredientsText &&
-        !result.barcode &&
-        result.extractedNutrition.calories === null &&
-        result.extractedNutrition.protein === null &&
-        result.extractedNutrition.totalFat === null &&
-        result.extractedNutrition.sodium === null &&
-        result.extractedNutrition.totalCarbs === null;
-      if (noEvidence && routeMode === 'auto') {
+      // v2.4.1: routing decision is centralized + tested. Garbage OCR can no
+      // longer open the packaged form ("She" once passed the old gate because
+      // productName was truthy). The analyzer now hands us a validated
+      // hasPackagingEvidence flag and an honest imageType.
+      const decision = decidePackagedRoute({
+        hasPackagingEvidence: result.hasPackagingEvidence,
+        imageType: result.imageType,
+        routeMode,
+      });
+      if (decision.route === 'ambiguous') {
         setStagedFiles([]);
         setAmbiguousFiles(files);
         return;
@@ -391,10 +419,65 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
       </div>
 
       <p className="text-[11px] text-stone-400 dark:text-stone-500 pl-0.5">
-        {capabilitySummary().cloudVision
-          ? 'On-device analysis: recognition model + local OCR + public product database. Optional cloud adapter: configured.'
-          : 'NutriLens 2.3: on-device recognition (Food-101 model, ~9.4 MB one-time download) + local OCR + public product database + curated Indian-dish registry (21 dishes, regional dishes marked experimental). No cloud, no API keys.'}
+        {scanHubNotice(capabilitySummary().cloudVision)}
       </p>
+
+      {/* v2.4.1: model failure card — honest retry/choice, never silent OCR fallback */}
+      {modelError && !isAnalyzing && (
+        <div className="p-6 rounded-3xl border border-red-200 dark:border-red-900/50 bg-red-50/60 dark:bg-red-950/20 space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold text-red-900 dark:text-red-200">
+                On-device recognition could not run
+              </h3>
+              <p className="text-xs text-red-800/80 dark:text-red-300/80 mt-1">
+                {modelError.message}
+              </p>
+              <p className="text-xs text-red-800/60 dark:text-red-400/60 mt-1.5">
+                We did not guess what this photo shows. Retry, or tell us the scan type — you stay in control.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                const f = modelError.files;
+                setModelError(null);
+                runFileAnalysis(f, 'nutrition');
+              }}
+              className="px-4 py-2.5 rounded-xl bg-[#159A6A] hover:bg-[#12855A] text-white text-sm font-semibold flex items-center gap-2"
+            >
+              <Loader2 className="w-4 h-4" /> Retry recognition
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const f = modelError.files;
+                setModelError(null);
+                setRouteMode('cooked');
+                setCookedFiles(f);
+              }}
+              className="px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-800 text-sm font-medium text-red-900 dark:text-red-200 hover:bg-red-100/60 dark:hover:bg-red-900/30 flex items-center gap-2"
+            >
+              <ChefHat className="w-4 h-4" /> It&#39;s a cooked dish — I&#39;ll pick it
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const f = modelError.files;
+                setModelError(null);
+                setRouteMode('packaged');
+                runFileAnalysis(f, 'nutrition');
+              }}
+              className="px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-800 text-sm font-medium text-red-900 dark:text-red-200 hover:bg-red-100/60 dark:hover:bg-red-900/30 flex items-center gap-2"
+            >
+              <Package className="w-4 h-4" /> It&#39;s a package — scan the label
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* v2: Ambiguity card — image type unknown, ask instead of guessing */}
       {ambiguousFiles && (
@@ -409,6 +492,16 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
                 No barcode, no readable package text and no nutrition table were found. Choose how to
                 continue — we never guess a product or dish for you.
               </p>
+              {visionHint && visionHint.length > 0 && (
+                <p className="text-xs text-amber-800/70 dark:text-amber-400/70 mt-2">
+                  The on-device model thought this might be{' '}
+                  {visionHint
+                    .slice(0, 3)
+                    .map((c) => `${c.name} (${Math.round(c.confidence * 100)}%)`)
+                    .join(', ')}
+                  , but was not confident enough to decide for you.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap gap-2.5">
@@ -416,6 +509,7 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
               type="button"
               onClick={() => {
                 setCookedFiles(ambiguousFiles);
+                setVisionCandidates(visionHint ?? undefined);
                 setAmbiguousFiles(null);
               }}
               className="px-4 py-2.5 rounded-xl bg-[#159A6A] hover:bg-[#12855A] text-white text-sm font-semibold flex items-center gap-2"
@@ -434,7 +528,10 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
             </button>
             <button
               type="button"
-              onClick={() => setAmbiguousFiles(null)}
+              onClick={() => {
+                setAmbiguousFiles(null);
+                setVisionHint(null);
+              }}
               className="px-4 py-2.5 rounded-xl text-sm text-stone-500 dark:text-stone-400 hover:underline"
             >
               Dismiss

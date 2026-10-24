@@ -177,10 +177,10 @@ export async function analyzePackagedFoodImage(
   const parsedIngredients = parseIngredientsText(rawText);
   const claims = detectMarketingClaimsFromText(rawText);
 
-  const fallbackProductName =
-    imageInput instanceof File
-      ? imageInput.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
-      : 'Scanned Food Product';
+  // v2.4.1: filenames are NOT product names ("She.jpg" once became "She").
+  // With no validated title evidence the honest answer is "Unknown" and the
+  // user types the real name in the review form.
+  const fallbackProductName = 'Unknown';
 
   onProgress?.('Generating Food Intelligence Report...', 95);
 

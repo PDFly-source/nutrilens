@@ -53,6 +53,13 @@ export interface UnifiedAnalysisResult {
   barcode?: string | null;
   /** v2: image quality verdict for the primary photo. */
   qualityAdvice?: string | null;
+  /**
+   * v2.4.1: TRUE packaging evidence existed in the OCR text — a known brand,
+   * a validated (non-garbage) product title, nutrition numbers, ingredients,
+   * or a barcode. When this is false the photo may be cooked food or junk
+   * text, and auto-mode routing must NOT open the packaged review form.
+   */
+  hasPackagingEvidence: boolean;
 }
 
 /**
@@ -270,6 +277,9 @@ export async function analyzeFoodImages(
       brand,
       productVariant: variant,
       claims,
+      // The structured vision adapter only runs for images it classified as
+      // packaging, so this path inherently carries packaging evidence.
+      hasPackagingEvidence: true,
       imageType: detectedType,
       detectionNotes,
       imagesProcessed: imageItems,
@@ -412,10 +422,20 @@ export async function analyzeFoodImages(
     parsedNutrition.totalFat !== null ||
     parsedNutrition.sodium !== null;
   const hasIngredientsEvidence = (parsedIngredients.cleanRawList || '').trim().length > 0;
+  // v2.4.1: does this text actually look like a package? productName here is
+  // the VALIDATED title (garbage like "She" is already null) — a truthy
+  // value means a plausible printed title or brand was found.
+  const hasPackagingEvidence =
+    brand !== null ||
+    productName !== '' ||
+    hasNutritionEvidence ||
+    hasIngredientsEvidence ||
+    barcode !== null;
 
   const isFrontPackageOnly =
-    imageType === 'front_package' ||
-    (!hasNutritionEvidence && !hasIngredientsEvidence);
+    imageType === 'front_package' &&
+    !hasNutritionEvidence &&
+    !hasIngredientsEvidence;
 
   // ---- Honest detection notes ----
   let detectionNotes: string;
@@ -426,6 +446,10 @@ export async function analyzeFoodImages(
   } else if (!ocrProducedSomeText) {
     detectionNotes =
       'No readable text was found in this photo. Values were left unknown — please type them in manually, or retake the photo with sharper focus and good lighting.';
+  } else if (!hasPackagingEvidence && ocrProducedSomeText) {
+    detectionNotes =
+      'Some text was found, but nothing that looks like a package (no brand, product title, nutrition table, ingredients or barcode). ' +
+      'If this is cooked food, pick the dish from the cooked-food scan instead.';
   } else if (isFrontPackageOnly) {
     detectionNotes =
       'This looks like the FRONT of the package, which usually shows only the brand and product name. ' +
@@ -490,5 +514,6 @@ export async function analyzeFoodImages(
     evidence,
     barcode,
     qualityAdvice,
+    hasPackagingEvidence,
   };
 }

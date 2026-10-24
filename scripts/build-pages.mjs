@@ -57,7 +57,20 @@ if (existsSync(apiDir)) {
 // 2. Clean previous export output.
 rmSync(outDir, { recursive: true, force: true });
 
-// 3. Run the real production build (inherits env: NEXT_OUTPUT, NEXT_PUBLIC_BASE_PATH).
+// 2b. Inject the exact commit SHA of the build into the client bundle
+// (lib/build-info.ts). In CI this is the SHA GitHub Pages deploys; locally
+// it falls back to the working tree's git SHA. Never hardcoded anywhere.
+let commitSha = process.env.GITHUB_SHA || '';
+if (!commitSha) {
+  const git = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  if (git.status === 0) commitSha = git.stdout.trim();
+}
+if (commitSha) {
+  process.env.NEXT_PUBLIC_COMMIT_SHA = commitSha.slice(0, 7);
+  console.log(`[build-pages] Build identity: ${process.env.NEXT_PUBLIC_COMMIT_SHA}`);
+}
+
+// 3. Run the real production build (inherits env: NEXT_OUTPUT, NEXT_PUBLIC_BASE_PATH, NEXT_PUBLIC_COMMIT_SHA).
 const result = spawnSync('npx', ['next', 'build'], {
   stdio: 'inherit',
   shell: process.platform === 'win32',

@@ -340,4 +340,13 @@ export async function browserClassifyCooked(
  */
 export function __setSessionForTests(p: Promise<VisionSession> | null): void {
   sessionPromise = p;
+  // Mirror the production status transitions so UI tests see the same
+  // lifecycle (ready on success, error + message on failure).
+  if (p) {
+    p.then(
+      () => setStatus({ state: 'ready' }),
+      (err: unknown) =>
+        setStatus({ state: 'error', message: err instanceof Error ? err.message : String(err) })
+    );
+  }
 }

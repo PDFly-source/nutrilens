@@ -407,7 +407,28 @@ export function detectImageTypeFromText(text: string): ImageType {
   if (hasNutrition && hasIngredients) return 'multi_panel';
   if (hasNutrition) return 'nutrition_label';
   if (hasIngredients) return 'ingredients_label';
-  if (lower.length > 20 && !hasNutrition && !hasIngredients) return 'front_package';
+
+  // v2.4.1: incidental background text on a COOKED-FOOD photo must NOT make
+  // the image a "front package". The front of a package needs actual
+  // packaging evidence: a known brand, a product-type word, a plausible
+  // multi-word printed title, or marketing claims. Without any of that,
+  // be honest: the image type is unknown and the UI asks the user.
+  if (!hasNutrition && !hasIngredients) {
+    const hasBrandEvidence = BRAND_LEXICON.some((entry) =>
+      entry.aliases.some((alias) => {
+        const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(lower);
+      })
+    );
+    const hasTypeWord = PRODUCT_TYPE_WORDS.some((word) =>
+      new RegExp(`(^|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`, 'i').test(lower)
+    );
+    const hasPlausibleTitle = (lower.match(/[^\n]+/g) || []).some((line) => {
+      const t = line.trim();
+      return t.length >= 5 && t.length <= 48 && isPlausibleProductTitle(t);
+    });
+    if (hasBrandEvidence || hasTypeWord || hasPlausibleTitle) return 'front_package';
+  }
 
   return 'unknown' as any;
 }
@@ -440,6 +461,74 @@ const NON_TITLE_SECTION_PATTERNS: RegExp[] = [
   /^\d+\s*(g|kg|ml|l|pcs|pieces)\b\.?$/i,
   /^\*+$/,
 ];
+
+/**
+ * Words that are common English pronouns/articles/contractions. OCR noise on
+ * cooked-food photos frequently yields exactly these ("She") — a real product
+ * title is never one of them.
+ */
+const TITLE_STOPWORDS = new Set([
+  'she', 'he', 'her', 'his', 'him', 'they', 'them', 'the', 'a', 'an', 'and',
+  'or', 'but', 'if', 'of', 'to', 'in', 'on', 'at', 'is', 'it', 'its', 'for',
+  'you', 'your', 'we', 'our', 'my', 'this', 'that', 'with', 'from', 'not',
+  'no', 'yes', 'ok', 'okay', 'wow', 'yum', 'del', 'the',
+]);
+
+/** True when a word matches the offline brand lexicon (case-insensitive). */
+function isLexiconBrand(word: string): boolean {
+  const w = word.toLowerCase().replace(/[^a-z0-9&'\- ]/g, '').trim();
+  return BRAND_LEXICON.some((e) => e.aliases.some((a) => a.toLowerCase() === w));
+}
+
+/**
+ * Final plausibility gate for an OCR-derived PRODUCT TITLE (v2.4.1).
+ *
+ * Validates the JOINED title, not only individual lines: cooked-food photos
+ * produce multi-line OCR junk ("A Naha ai BR RA a ge") that passes per-line
+ * checks. Rules:
+ *  - single word: must be a lexicon brand, a product-type word, or a
+ *    substantial (>=5 chars) non-stopword — "She" and "Poha" alone never
+ *    become product names from weak evidence.
+ *  - multi word: at least half the letter-bearing tokens must be real-looking
+ *    words (>=3 letters, contains a vowel) — joined junk fails this.
+ * Legitimate short brand names stay valid through the lexicon rule.
+ */
+export function isPlausibleProductTitle(fragment: string): boolean {
+  const trimmed = (fragment || '').trim();
+  if (!trimmed) return false;
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  const words = tokens.filter((t) => /[A-Za-z]/.test(t));
+  if (words.length === 0) return false;
+
+  if (words.length === 1) {
+    const raw = words[0];
+    const bare = raw.toLowerCase().replace(/[^a-z]/g, '');
+    if (!bare) return false;
+    if (TITLE_STOPWORDS.has(bare)) return false;
+    if (isLexiconBrand(raw) || isLexiconBrand(bare)) return true;
+    if (PRODUCT_TYPE_WORDS.includes(bare)) return true;
+    // A lone generic word is only a plausible title when substantial;
+    // 3-5 letter non-lexicon words ("She", "Salt", "plate") are honest no.
+    return bare.length >= 6 && !/[\d]/.test(raw);
+  }
+
+  // Multi-word titles: require real-looking word content.
+  // Isolated 1-letter tokens are classic OCR noise ("bet 3 SEEN o").
+  if (words.some((w) => w.replace(/[^A-Za-z]/g, '').length === 1)) return false;
+  const strong = words.filter((w) => {
+    const bare = w.replace(/[^A-Za-z']/g, '');
+    if (bare.length < 3) return false;
+    if (!/[aeiouy]/i.test(bare)) return false;
+    // Pure screaming caps 2-3 letter clusters ("BR", "RA") are OCR junk.
+    if (bare.length <= 3 && bare === bare.toUpperCase() && /^[A-Z]+$/.test(bare)) return false;
+    return true;
+  });
+  if (strong.length < 2 && words.length > 2) return false;
+  if (strong.length < 1) return false;
+  // And at least one genuinely substantial token.
+  if (!words.some((w) => w.replace(/[^A-Za-z]/g, '').length >= 4)) return false;
+  return true;
+}
 
 /** True when a line could plausibly be part of a printed product title. */
 function isCandidateTitleLine(line: string): boolean {
@@ -572,6 +661,12 @@ export function extractBrandAndName(rawText: string): BrandAndName {
     ) {
       productName = null; // a brand-only line is the brand, not the product name
     }
+  }
+
+  // v2.4.1: revalidate the FINAL JOINED title (cooked-food OCR junk like
+  // "A Naha ai BR RA a ge" passes per-line checks but not this gate).
+  if (productName !== null && !isPlausibleProductTitle(productName)) {
+    productName = null;
   }
 
   return { brand, productName };
