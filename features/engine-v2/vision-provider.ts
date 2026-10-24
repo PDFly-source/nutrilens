@@ -82,6 +82,9 @@ export async function visionAnalyzeCooked(
 /** Honest capability description for UI badges. */
 export function capabilitySummary(): { cloudVision: boolean; barcodeDatabase: boolean } {
   return {
+    // v2.2: cooked-dish recognition now runs ON-DEVICE (onnxruntime-web +
+    // self-hosted Food-101 model), so no cloud endpoint is required. This
+    // flag now reports the OPTIONAL cloud adapter only.
     cloudVision: isVisionConfigured(),
     // Open Food Facts lookup works directly from the browser on Pages.
     barcodeDatabase: true,

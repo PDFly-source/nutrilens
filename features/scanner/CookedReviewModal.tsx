@@ -3,7 +3,7 @@
 /**
  * Cooked-food review modal (v2).
  *
- * Flow: quality check → dish identification (vision model when configured,
+ * Flow: quality check → dish identification (on-device Food-101 model,
  * otherwise user selection — never guessed silently) → portion input →
  * live estimate with explicit uncertainty → confirm → cooked report.
  */
@@ -30,7 +30,15 @@ import {
   EstimatorInput,
 } from '@/features/engine-v2/cooked/estimator';
 import { assessImageQualityBrowser } from '@/features/engine-v2/image-quality';
-import { isVisionConfigured, visionAnalyzeCooked } from '@/features/engine-v2/vision-provider';
+import { visionAnalyzeCooked, isVisionConfigured } from '@/features/engine-v2/vision-provider';
+import {
+  browserClassifyCooked,
+  watchVisionStatus,
+  ImageDecodeError,
+  ModelDownloadError,
+  InferenceError,
+  type VisionStatus,
+} from '@/features/engine-v2/browser-vision';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { CookedFoodReport } from '@/features/engine-v2/types';
 import { DishCandidate, isAmbiguous } from '@/features/engine-v2/vision-mapping';
@@ -84,16 +92,15 @@ export function CookedReviewModal({
     const first = initialCandidates?.find((c) => findDishes(c.name).length > 0);
     if (!initialCandidates || initialCandidates.length === 0) return null;
     if (!first) {
-      return 'The vision model could not match this photo to a known dish in our database — pick the closest option below.';
+      return 'The recognition model could not match this photo to a known dish in our database — pick the closest option below.';
     }
     const pct = Math.round(first.confidence * 100);
     return isAmbiguous(initialCandidates)
-      ? `Vision model ranked this as "${first.name}" (${pct}% confidence) but it is ambiguous — please confirm the dish below.`
-      : `Vision model identified "${first.name}" (${pct}%) — pre-selected for you, correct it if wrong.`;
+      ? `Recognition ranked this as "${first.name}" (${pct}% confidence) but it is ambiguous — please confirm the dish below.`
+      : `Recognition identified "${first.name}" (${pct}%) — pre-selected for you, correct it if wrong.`;
   });
-  const [visionBusy, setVisionBusy] = useState(
-    () => isVisionConfigured() && !initialCandidates?.length
-  );
+  const [visionBusy, setVisionBusy] = useState(() => !initialCandidates?.length);
+  const [visionStatus, setVisionStatus] = useState<VisionStatus>({ state: 'idle' });
   // v2.1: follow-up answers (user-provided evidence)
   const [fillingInput, setFillingInput] = useState('');
   const [sauceInput, setSauceInput] = useState('');
@@ -122,43 +129,89 @@ export function CookedReviewModal({
   const dish = dishId ? getDishById(dishId) : null;
 
 
-  // In-modal classification when ScanHub did not pre-classify (e.g. user
-  // picked Cooked mode directly) — only when an endpoint is configured.
+  // In-modal classification when ScanHub did not pre-classify (e.g. the
+  // user picked Cooked mode directly). v2.2: the ON-DEVICE Food-101 model
+  // runs by default — no API key, no cloud. If an optional cloud endpoint
+  // is configured, it refines candidates on top (still never auto-submits).
   useEffect(() => {
-    if (!isVisionConfigured() || !previewUrl || initialCandidates?.length) return;
+    if (!previewUrl || initialCandidates?.length) return;
     let cancelled = false;
+    const unsubscribe = watchVisionStatus((st: VisionStatus) => {
+      if (!cancelled) setVisionStatus(st);
+    });
     (async () => {
       try {
-        const res = await visionAnalyzeCooked({
-          images: [{ dataUrl: previewUrl }],
-          mode: 'cooked',
-        });
-        if (cancelled || !res || res.candidates.length === 0) return;
-        const ranked = res.candidates
-          .map((c) => ({ c, dishes: findDishes(c.name) }))
+        // 1) On-device classification (no credentials required).
+        const blob = await (await fetch(previewUrl)).blob();
+        const res = await browserClassifyCooked(blob);
+        let candidates = res.candidates;
+        let notes: string[] = [];
+        if (res.note) notes.push(res.note);
+        // 2) Optional cloud refinement — only when genuinely configured.
+        if (isVisionConfigured()) {
+          try {
+            const cloud = await visionAnalyzeCooked({
+              images: [{ dataUrl: previewUrl }],
+              mode: 'cooked',
+            });
+            if (cloud && cloud.candidates.length > 0) {
+              candidates = cloud.candidates;
+              notes = cloud.note ? [cloud.note] : [];
+            }
+          } catch {
+            notes.push('Optional cloud adapter unreachable — using on-device recognition.');
+          }
+        }
+        if (cancelled) return;
+        const ranked = candidates
+          .map((c) => ({
+            c,
+            dishes: c.dishId
+              ? [getDishById(c.dishId)].filter((d): d is NonNullable<typeof d> => d !== null)
+              : findDishes(c.name),
+          }))
           .filter((r) => r.dishes.length > 0);
         if (ranked.length > 0) {
           setDishId(ranked[0].dishes[0].id);
-          if (res.visibleIngredients.length > 0) setVisibleIngredients(res.visibleIngredients);
-          if (res.portionEstimateG) setWeightInput(String(res.portionEstimateG));
           const pct = Math.round(ranked[0].c.confidence * 100);
+          const near = ranked[0].c.kind === 'near' ? ranked[0].c.note ?? '' : '';
           setVisionNote(
-            (res.note ? `${res.note} ` : '') +
-              (isAmbiguous(res.candidates)
+            [
+              ...notes,
+              near,
+              isAmbiguous(candidates)
                 ? `Ranked "${ranked[0].c.name}" first (${pct}%) but ambiguous — please confirm.`
-                : `Identified as "${ranked[0].c.name}" (${pct}%) — correct it if wrong.`)
+                : `Identified as "${ranked[0].c.name}" (${pct}%) — correct it if wrong.`,
+            ]
+              .filter(Boolean)
+              .join(' ')
           );
+        } else if (candidates.length === 0 && res.note) {
+          setVisionNote(res.note);
         }
-      } catch {
-        setVisionNote(
-          'Cloud vision is configured but currently unreachable — identify the dish below instead.'
-        );
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof ModelDownloadError) {
+          setVisionNote(
+            'On-device recognition needs a one-time ~9.4 MB model download. Identify the dish below, or retry when back online.'
+          );
+        } else if (err instanceof ImageDecodeError) {
+          setVisionNote(err.message);
+        } else if (err instanceof InferenceError) {
+          setVisionNote('On-device recognition failed on this photo — identify the dish below instead.');
+        } else {
+          setVisionNote('Recognition is unavailable right now — identify the dish below instead.');
+        }
       } finally {
-        if (!cancelled) setVisionBusy(false);
+        if (!cancelled) {
+          setVisionBusy(false);
+          unsubscribe();
+        }
       }
     })();
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [previewUrl, initialCandidates]);
 
@@ -201,10 +254,10 @@ export function CookedReviewModal({
       dishId: dish.id,
       dishName: dish.name,
       alternatives: matches.filter((m) => m.id !== dish.id).slice(0, 3).map((m) => m.name),
-      classificationProvenance: visionNote?.includes('Vision model')
+      classificationProvenance: visionNote?.includes('Recognition')
         ? 'vision_estimate'
         : 'user_provided',
-      classificationConfidence: visionNote?.includes('Vision model') ? 0.6 : 0.9,
+      classificationConfidence: visionNote?.includes('Recognition') ? 0.6 : 0.9,
       portion: estimate.portion,
       calories: estimate.calories,
       protein: estimate.protein,
@@ -284,7 +337,14 @@ export function CookedReviewModal({
           )}
           {visionBusy && (
             <div className="flex items-center gap-2 text-xs text-stone-500">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Asking the configured vision model…
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />{' '}
+              {visionStatus.state === 'downloading'
+                ? `Downloading on-device recognition model… ${Math.round(
+                    visionStatus.total
+                      ? (visionStatus.received / visionStatus.total) * 100
+                      : (visionStatus.received / (9.4 * 1024 * 1024)) * 100
+                  )}%`
+                : 'Analyzing your photo on this device…'}
             </div>
           )}
           {visionNote && (

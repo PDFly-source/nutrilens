@@ -38,7 +38,26 @@ interface ReportDashboardProps {
   onShare: () => void;
 }
 
-export function ReportDashboard({
+export function ReportDashboard(props: ReportDashboardProps) {
+  const { analysis } = props;
+  // v2: cooked-dish analyses render their own evidence-aware layout.
+  // Separate wrapper so the packaged-report hooks below are never called
+  // conditionally (react-hooks/rules-of-hooks).
+  if (analysis.analysisKind === 'cooked' && analysis.cookedReport) {
+    return (
+      <CookedFoodReport
+        analysis={analysis}
+        onScanAnother={props.onScanAnother}
+        onCompare={props.onCompare}
+        onExport={props.onExport}
+        onShare={props.onShare}
+      />
+    );
+  }
+  return <PackagedReportDashboard {...props} />;
+}
+
+function PackagedReportDashboard({
   analysis,
   onScanAnother,
   onScanBackPanel,
@@ -48,19 +67,6 @@ export function ReportDashboard({
 }: ReportDashboardProps) {
   // The back-panel rescan action mirrors "scan another" when not customized.
   const handleScanBackPanel = onScanBackPanel ?? onScanAnother;
-
-  // v2: cooked-dish analyses render their own evidence-aware layout.
-  if (analysis.analysisKind === 'cooked' && analysis.cookedReport) {
-    return (
-      <CookedFoodReport
-        analysis={analysis}
-        onScanAnother={onScanAnother}
-        onCompare={onCompare}
-        onExport={onExport}
-        onShare={onShare}
-      />
-    );
-  }
   const { preferenceResults } = useSession();
 
   // Serving multiplier calculator state

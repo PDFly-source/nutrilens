@@ -74,7 +74,7 @@ export function CookedFoodReport({
               {r.classificationProvenance === 'user_provided'
                 ? 'confirmed by you'
                 : r.classificationProvenance === 'vision_estimate'
-                  ? `suggested by the vision model (${Math.round(r.classificationConfidence * 100)}% confidence)`
+                  ? `suggested by the on-device recognition model (${Math.round(r.classificationConfidence * 100)}% confidence)`
                   : 'unknown'}
             </p>
           </div>

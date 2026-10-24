@@ -8,6 +8,14 @@
 export interface DishCandidate {
   name: string;
   confidence: number; // 0..1
+  /** Resolved NutriLens dish id (browser-model candidates carry it directly). */
+  dishId?: string;
+  /** 'direct' = the class IS the dish; 'near' = same family, user must confirm. */
+  kind?: 'direct' | 'near';
+  /** Honest caveat shown with near-matches. */
+  note?: string;
+  /** Raw Food-101 class name for transparency/debugging. */
+  rawClass?: string;
 }
 
 export interface CookedVisionResult {

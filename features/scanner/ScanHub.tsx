@@ -6,9 +6,10 @@ import { CameraModal } from '@/features/scanner/CameraModal';
 import { ManualReviewModal } from '@/features/scanner/ManualReviewModal';
 import { CookedReviewModal } from '@/features/scanner/CookedReviewModal';
 import { FieldEvidenceMap } from '@/features/engine-v2/types';
-import { capabilitySummary, isVisionConfigured, visionAnalyzeCooked } from '@/features/engine-v2/vision-provider';
+import { capabilitySummary } from '@/features/engine-v2/vision-provider';
+import { browserClassifyCooked } from '@/features/engine-v2/browser-vision';
 import { DishCandidate } from '@/features/engine-v2/vision-mapping';
-import { findDishes } from '@/features/engine-v2/cooked/dishes';
+import { findDishes, getDishById } from '@/features/engine-v2/cooked/dishes';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { analyzeFoodImages } from '@/features/ocr/unified-analyzer';
 import { mergeNutritionData, describeConflicts, mergeReviewFields } from '@/features/ocr/merge';
@@ -94,38 +95,33 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
       return;
     }
 
-    // v2.1: automatic recognition — when a secure vision endpoint is
-    // configured, classify BEFORE the heavy packaged OCR pipeline and route
-    // cooked food directly. Unreachable/unconfigured → normal packaged flow.
-    if (routeMode === 'auto' && isVisionConfigured()) {
+    // v2.2: automatic recognition — ALWAYS available, no API key needed. The
+    // on-device Food-101 model classifies BEFORE the heavy packaged OCR
+    // pipeline and routes cooked food directly. Model download/inference
+    // failure → honest packaged pipeline with no invented routing.
+    if (routeMode === 'auto') {
       setIsAnalyzing(true);
-      setAnalysisStage('Identifying the food with the vision model...');
+      setAnalysisStage('Identifying the food with the on-device model...');
       setAnalysisPercent(10);
       try {
-        const first = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = () => reject(new Error('Could not read image'));
-          reader.readAsDataURL(files[0]);
-        });
-        const res = await visionAnalyzeCooked({ images: [{ dataUrl: first }], mode: 'cooked' });
-        const ranked = res?.candidates ?? [];
-        const matched = ranked.filter((c) => findDishes(c.name).length > 0);
+        const res = await browserClassifyCooked(files[0]);
+        const ranked = res.candidates;
+        const matched = ranked.filter((c) => (c.dishId ? getDishById(c.dishId) : findDishes(c.name).length > 0));
         if (matched.length > 0) {
           setIsAnalyzing(false);
           setVisionCandidates(matched);
-          setVisionVisible(res?.visibleIngredients);
-          setVisionPortionG(res?.portionEstimateG ?? null);
+          setVisionVisible(res.visibleIngredients);
+          setVisionPortionG(res.portionEstimateG);
           setCookedFiles(files);
           return;
         }
-        // Model saw food but nothing matched our database → cooked flow with
-        // honest note; or the model said "packaged" → fall through to OCR.
-        if (ranked.length === 0 && res?.note && /packag/i.test(res.note)) {
-          // continue into the packaged pipeline below
-        }
+        // No dish matched (e.g. dal/curry — no Food-101 class, or a packaged
+        // product). If the model was weakly confident overall this is likely
+        // a label/package → continue into the packaged OCR pipeline below.
       } catch {
-        // Vision unreachable — continue with the packaged pipeline honestly.
+        // Model not downloaded / offline / inference error — continue with
+        // the packaged pipeline honestly. The cooked flow remains reachable
+        // via the explicit "Cooked dish" scan type.
       }
       setIsAnalyzing(false);
     }
@@ -392,8 +388,8 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
 
       <p className="text-[11px] text-stone-400 dark:text-stone-500 pl-0.5">
         {capabilitySummary().cloudVision
-          ? 'Cloud vision analysis: configured. Local OCR and the public product database are used as verification.'
-          : 'On-device analysis: local OCR + public product database lookup. No cloud vision endpoint is configured.'}
+          ? 'On-device analysis: recognition model + local OCR + public product database. Optional cloud adapter: configured.'
+          : 'On-device analysis: recognition model + local OCR + public product database lookup. No cloud, no API keys — the recognition model (~9.4 MB) downloads once on first cooked-dish scan.'}
       </p>
 
       {/* v2: Ambiguity card — image type unknown, ask instead of guessing */}
