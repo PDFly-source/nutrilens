@@ -180,4 +180,16 @@ export interface ProductAnalysis {
   detectionNotes?: string;
   hasVerifiedNutritionData?: boolean;
   hasVerifiedIngredientsData?: boolean;
+  /** v2: which pipeline produced this analysis. Defaults to 'packaged'. */
+  analysisKind?: 'packaged' | 'cooked';
+  /** v2: cooked-dish report when analysisKind === 'cooked'. */
+  cookedReport?: import('@/features/engine-v2/types').CookedFoodReport;
+  /** v2: per-field provenance and validation evidence. */
+  evidence?: import('@/features/engine-v2/types').FieldEvidenceMap;
 }
+
+// ============================================================
+// Food Intelligence Engine v2 extensions (backwards compatible)
+// ============================================================
+
+export type { AnalysisKind, CookedFoodReport, FieldEvidenceMap, EvidenceField, Provenance, FieldValidation } from '@/features/engine-v2/types';

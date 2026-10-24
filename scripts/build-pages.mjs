@@ -76,3 +76,28 @@ if (!existsSync(outDir)) {
 }
 
 console.log('[build-pages] Static export completed successfully → ./out');
+
+// 4. Verify GitHub Pages base-path assets: every /nutrilens/_next asset
+// referenced by the exported pages must exist on disk under out/.
+import fs from 'fs';
+import path from 'path';
+
+const pages = ['index.html'];
+const missing = [];
+const checked = new Set();
+for (const page of pages) {
+  const html = fs.readFileSync(path.join(outDir, page), 'utf8');
+  const refs = [...html.matchAll(/(?:href|src)="(\/[^"]+)"/g)].map((m) => m[1]);
+  for (const ref of refs) {
+    if (!ref.startsWith('/nutrilens/')) continue; // only verify base-pathed assets
+    if (checked.has(ref)) continue;
+    checked.add(ref);
+    const file = path.join(outDir, ref.replace('/nutrilens/', ''));
+    if (!fs.existsSync(file)) missing.push(ref);
+  }
+}
+if (missing.length > 0) {
+  console.error('[build-pages] MISSING base-path assets in export:', missing);
+  process.exit(1);
+}
+console.log(`[build-pages] Verified ${checked.size} base-path assets exist in ./out ✓`);

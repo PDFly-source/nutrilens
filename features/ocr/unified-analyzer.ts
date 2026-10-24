@@ -17,8 +17,13 @@ import {
   detectImageTypeFromText,
   extractBrandAndName,
 } from '@/features/ocr/parser';
-import { runLocalOcr, warmUpOcrEngine } from '@/features/ocr/ocr-service';
+import { runLocalOcr, warmUpOcrEngine, detectBarcodeFromImage } from '@/features/ocr/ocr-service';
 import { compileProductAnalysis } from '@/features/scoring/engine';
+import { combineTableAndLineParsing, buildPackagedEvidence } from '@/features/engine-v2/pipeline';
+import { resolveProduct } from '@/features/engine-v2/product-resolver';
+import { lookupBarcode, offNutritionAsEvidence } from '@/features/engine-v2/barcode-off';
+import { assessImageQualityBrowser } from '@/features/engine-v2/image-quality';
+import { EvidenceField, FieldEvidenceMap } from '@/features/engine-v2/types';
 
 export interface UnifiedAnalysisInput {
   file?: File;
@@ -42,6 +47,12 @@ export interface UnifiedAnalysisResult {
   isFrontPackageOnly: boolean;
   hasVerifiedNutrition: boolean;
   hasVerifiedIngredients: boolean;
+  /** v2: per-field provenance + validation evidence. */
+  evidence?: FieldEvidenceMap;
+  /** v2: detected product barcode, when any. */
+  barcode?: string | null;
+  /** v2: image quality verdict for the primary photo. */
+  qualityAdvice?: string | null;
 }
 
 /**
@@ -228,7 +239,7 @@ export async function analyzeFoodImages(
 
     onProgress?.('Preparing review & intelligence report...', 95);
 
-    const compiled = compileProductAnalysis({
+  const compiled = compileProductAnalysis({
       scanMode: mode,
       imageType: detectedType,
       productName,
@@ -338,19 +349,57 @@ export async function analyzeFoodImages(
 
   onProgress?.('Validating extracted fields...', 88);
 
-  // ---- Evidence-based field extraction from the combined OCR text ----
-  const parsedNutrition = parseNutritionText(rawOcrText);
+  // ---- v2: image quality gate on the primary photo ----
+  let qualityAdvice: string | null = null;
+  try {
+    const qImg = new Image();
+    qImg.src = preprocessedList[0].dataUrl;
+    await new Promise((res) => { qImg.onload = res; qImg.onerror = res; });
+    const q = await assessImageQualityBrowser(qImg);
+    if (q.verdict !== 'good' && q.advice) qualityAdvice = q.advice;
+  } catch { /* quality gate is advisory only */ }
+
+  // ---- v2: barcode detection + Open Food Facts candidate lookup ----
+  let barcode: string | null = null;
+  let offProduct: ReturnType<typeof offNutritionAsEvidence> | null = null;
+  let offName: string | null = null;
+  let offBrand: string | null = null;
+  let offNote: string | null = null;
+  try {
+    const bImg = new Image();
+    bImg.src = preprocessedList[0].dataUrl;
+    await new Promise((res) => { bImg.onload = res; bImg.onerror = res; });
+    const bc = await detectBarcodeFromImage(bImg);
+    if (bc?.rawValue) {
+      barcode = bc.rawValue;
+      onProgress?.('Checking product database...', 91);
+      const lookup = await Promise.race([
+        lookupBarcode(bc.rawValue),
+        new Promise<any>((res) => setTimeout(() => res({ found: false, product: null, error: 'timeout' }), 6000)),
+      ]);
+      if (lookup && lookup.found && lookup.product) {
+        offProduct = offNutritionAsEvidence(lookup.product);
+        offName = lookup.product.name;
+        offBrand = lookup.product.brand;
+        offNote = `Barcode ${bc.rawValue} matched an Open Food Facts entry — database values are shown as candidates and are NOT auto-confirmed.`;
+      } else {
+        offNote = `Barcode ${bc.rawValue} detected, but no public product entry was found.`;
+      }
+    }
+  } catch { /* barcode/OFF is best-effort */ }
+
+  // ---- v2: table-aware parsing + line fallback ----
+  const { nutrition: parsedNutrition, table } = combineTableAndLineParsing(rawOcrText);
   const parsedIngredients = parseIngredientsText(rawOcrText);
   const detectedClaims = detectMarketingClaimsFromText(rawOcrText);
   const imageType = detectImageTypeFromText(rawOcrText);
-  const { brand: detectedBrand, productName: detectedName } =
-    extractBrandAndName(rawOcrText);
 
-  // NOTE: image filenames, timestamps, and numeric identifiers are NEVER used
-  // as the product name. The name comes only from text actually recognized in
-  // the image (or is left unknown for manual entry on the review screen).
-  const productName = detectedName || '';
-  const brand = detectedBrand;
+  // ---- v2: brand/title/flavour/net-weight resolution (never filenames) ----
+  const resolved = resolveProduct(rawOcrText);
+  const productName = resolved.title || '';
+  const brand = resolved.brand;
+  const flavour = resolved.flavour;
+  const packageSize = resolved.netWeightRaw;
 
   for (const img of imageItems) {
     img.imageType = imageType;
@@ -387,14 +436,31 @@ export async function analyzeFoodImages(
       'Detected values are shown below — please verify them before generating the report.';
   } else {
     detectionNotes =
-      'Text recognized on-device. Please verify the detected values below before generating the report.';
+      (table.detected
+        ? `Nutrition table recognized with basis "${table.rawHeader?.trim()}" — column-aware parsing used. `
+        : 'Text recognized on-device. ') +
+      'Please verify the detected values below before generating the report.';
   }
+  if (qualityAdvice) detectionNotes = `${qualityAdvice} ${detectionNotes}`;
+  if (offNote) detectionNotes = `${detectionNotes} ${offNote}`;
 
+  // ---- v2: per-field evidence map (OCR + OFF candidates) ----
+  const { evidence } = buildPackagedEvidence({
+    nutrition: parsedNutrition,
+    productName,
+    brand,
+    ocrConfidence: ocrProducedSomeText ? 0.65 : 0.2,
+    offValues: offProduct || undefined,
+    offName,
+    offBrand,
+  });
   const compiled = compileProductAnalysis({
     scanMode: mode,
     imageType,
     productName: productName || 'Packaged Food Product',
     brand,
+    productVariant: flavour,
+    packageSize,
     nutrition: parsedNutrition,
     ingredients: parsedIngredients.items,
     rawIngredientsText: parsedIngredients.cleanRawList,
@@ -413,7 +479,7 @@ export async function analyzeFoodImages(
     ingredientsText: parsedIngredients.cleanRawList,
     productName,
     brand,
-    productVariant: null,
+    productVariant: flavour,
     claims: detectedClaims,
     imageType,
     detectionNotes,
@@ -421,5 +487,8 @@ export async function analyzeFoodImages(
     isFrontPackageOnly,
     hasVerifiedNutrition: compiled.hasVerifiedNutritionData || false,
     hasVerifiedIngredients: compiled.hasVerifiedIngredientsData || false,
+    evidence,
+    barcode,
+    qualityAdvice,
   };
 }

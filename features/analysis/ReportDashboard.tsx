@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ProductAnalysis, IngredientItem } from '@/types/food';
 import { useSession } from '@/features/session/SessionContext';
+import { CookedFoodReport } from '@/features/analysis/CookedFoodReport';
 import {
   ShieldAlert,
   ChevronDown,
@@ -47,6 +48,19 @@ export function ReportDashboard({
 }: ReportDashboardProps) {
   // The back-panel rescan action mirrors "scan another" when not customized.
   const handleScanBackPanel = onScanBackPanel ?? onScanAnother;
+
+  // v2: cooked-dish analyses render their own evidence-aware layout.
+  if (analysis.analysisKind === 'cooked' && analysis.cookedReport) {
+    return (
+      <CookedFoodReport
+        analysis={analysis}
+        onScanAnother={onScanAnother}
+        onCompare={onCompare}
+        onExport={onExport}
+        onShare={onShare}
+      />
+    );
+  }
   const { preferenceResults } = useSession();
 
   // Serving multiplier calculator state

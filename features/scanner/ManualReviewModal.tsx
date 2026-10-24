@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { NUTRITION_NUMERIC_FIELDS } from '@/features/ocr/merge';
+import { FieldEvidenceMap } from '@/features/engine-v2/types';
 import { NutritionData, ScanMode, ImageType, ProductAnalysis, ScanImageItem } from '@/types/food';
 import { parseIngredientsText } from '@/features/ocr/parser';
 import { compileProductAnalysis } from '@/features/scoring/engine';
@@ -33,6 +34,8 @@ interface ManualReviewModalProps {
   detectionNotes?: string;
   /** Fields whose readings conflicted across photos — shown for manual review. */
   conflicts?: string[];
+  /** v2: per-field provenance for evidence-aware status chips. */
+  evidence?: FieldEvidenceMap;
   /**
    * Incremented when a new extraction is merged into the initial* props
    * (e.g. results from an additional photo). Non-dirty fields are refreshed;
@@ -56,6 +59,7 @@ export function ManualReviewModal({
   images = [],
   detectionNotes,
   conflicts = [],
+  evidence,
   extractionSeq = 0,
   onConfirm,
   onCancel,
@@ -451,7 +455,13 @@ export function ManualReviewModal({
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="font-medium text-stone-700 dark:text-stone-300">{label}</span>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${isDetected ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold' : 'bg-stone-200/60 dark:bg-stone-800 text-stone-500'}`}>
-                        {isDetected ? `${val}${unit}` : 'Not detected'}
+                        {(() => {
+                          if (!isDetected) return 'Not detected';
+                          const edited = dirtyNutritionRef.current.has(String(field));
+                          const prov = evidence?.[String(field)]?.provenance;
+                          const tag = edited ? 'Edited' : prov === 'visually_observed' ? 'OCR' : val !== null ? 'Detected' : '';
+                          return tag ? `${tag}: ${val}${unit}` : `${val}${unit}`;
+                        })()}
                       </span>
                     </div>
                     <div className="relative">

@@ -4,6 +4,9 @@ import React, { useState, useRef } from 'react';
 import { ScanMode, NutritionData, ProductAnalysis, ImageType, ScanImageItem } from '@/types/food';
 import { CameraModal } from '@/features/scanner/CameraModal';
 import { ManualReviewModal } from '@/features/scanner/ManualReviewModal';
+import { CookedReviewModal } from '@/features/scanner/CookedReviewModal';
+import { FieldEvidenceMap } from '@/features/engine-v2/types';
+import { capabilitySummary } from '@/features/engine-v2/vision-provider';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { analyzeFoodImages } from '@/features/ocr/unified-analyzer';
 import { mergeNutritionData, describeConflicts, mergeReviewFields } from '@/features/ocr/merge';
@@ -24,6 +27,9 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
+  ChefHat,
+  Utensils,
+  Wand2,
 } from 'lucide-react';
 
 interface ScanHubProps {
@@ -57,6 +63,9 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
     imageType?: ImageType;
     detectionNotes?: string;
     conflicts?: string[];
+    evidence?: FieldEvidenceMap;
+    barcode?: string | null;
+    qualityAdvice?: string | null;
     mode: ScanMode;
   } | null>(null);
   // Incremented whenever a new extraction (e.g. an added photo's results)
@@ -64,9 +73,20 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
   // merge without clobbering fields the user has manually edited.
   const [reviewSeq, setReviewSeq] = useState(0);
 
+  // v2: scan routing — auto (default), forced packaged, or cooked dish
+  const [routeMode, setRouteMode] = useState<'auto' | 'packaged' | 'cooked'>('auto');
+  const [cookedFiles, setCookedFiles] = useState<File[] | null>(null);
+  const [ambiguousFiles, setAmbiguousFiles] = useState<File[] | null>(null);
+
   // Trigger analysis on an array of files
   const runFileAnalysis = async (files: File[], mode: ScanMode = 'nutrition') => {
     if (!files || files.length === 0) return;
+
+    // v2: explicit cooked-food route skips the label pipeline entirely.
+    if (routeMode === 'cooked') {
+      setCookedFiles(files);
+      return;
+    }
 
     setIsAnalyzing(true);
     setAnalysisError(null);
@@ -85,6 +105,24 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
         setAnalysisPercent(pct);
       });
 
+      // v2: AUTO mode ambiguity gate — when we found NO readable label text,
+      // NO ingredients and NO barcode, the image type is unknown. Never force
+      // a packaged-food analysis; ask the user instead.
+      const noEvidence =
+        !result.productName &&
+        !result.ingredientsText &&
+        !result.barcode &&
+        result.extractedNutrition.calories === null &&
+        result.extractedNutrition.protein === null &&
+        result.extractedNutrition.totalFat === null &&
+        result.extractedNutrition.sodium === null &&
+        result.extractedNutrition.totalCarbs === null;
+      if (noEvidence && routeMode === 'auto') {
+        setStagedFiles([]);
+        setAmbiguousFiles(files);
+        return;
+      }
+
       // Clear staged files and open review modal
       setStagedFiles([]);
       setReviewPayload({
@@ -97,6 +135,9 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
         images: result.imagesProcessed,
         imageType: result.imageType,
         detectionNotes: result.detectionNotes,
+        evidence: result.evidence,
+        barcode: result.barcode,
+        qualityAdvice: result.qualityAdvice,
         mode,
       });
     } catch (err: any) {
@@ -168,6 +209,9 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
           ? `${result.detectionNotes} Conflicting readings between photos for: ${conflictLabels.join(', ')} — please verify.`
           : result.detectionNotes,
         conflicts: conflictLabels,
+        evidence: result.evidence,
+        barcode: result.barcode ?? reviewPayload.barcode,
+        qualityAdvice: result.qualityAdvice,
         mode: reviewPayload.mode,
       });
       setReviewSeq((seq) => seq + 1);
@@ -276,6 +320,86 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
           Upload real food package photos or capture with your camera. Support for single or multi-photo sessions (Front + Back panels).
         </p>
       </div>
+
+      {/* v2: Scan mode selector — Auto / Packaged / Cooked dish */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Wand2 className="w-3.5 h-3.5" /> Scan type
+        </span>
+        {([
+          { id: 'auto', label: 'Auto', icon: Wand2, desc: 'Detect from the photo' },
+          { id: 'packaged', label: 'Packaged food', icon: Package, desc: 'Read the label' },
+          { id: 'cooked', label: 'Cooked dish', icon: ChefHat, desc: 'Estimate a prepared dish' },
+        ] as const).map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => setRouteMode(m.id)}
+            title={m.desc}
+            className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+              routeMode === m.id
+                ? 'border-[#159A6A] bg-[#DDF5EA] dark:bg-emerald-950/60 text-[#0F7B52] dark:text-emerald-300'
+                : 'border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'
+            }`}
+          >
+            <m.icon className="w-3.5 h-3.5" />
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-[11px] text-stone-400 dark:text-stone-500 pl-0.5">
+        {capabilitySummary().cloudVision
+          ? 'Cloud vision analysis: configured. Local OCR and the public product database are used as verification.'
+          : 'On-device analysis: local OCR + public product database lookup. No cloud vision endpoint is configured.'}
+      </p>
+
+      {/* v2: Ambiguity card — image type unknown, ask instead of guessing */}
+      {ambiguousFiles && (
+        <div className="p-6 rounded-3xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-950/20 space-y-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                We could not tell what this photo shows
+              </h3>
+              <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-1">
+                No barcode, no readable package text and no nutrition table were found. Choose how to
+                continue — we never guess a product or dish for you.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setCookedFiles(ambiguousFiles);
+                setAmbiguousFiles(null);
+              }}
+              className="px-4 py-2.5 rounded-xl bg-[#159A6A] hover:bg-[#12855A] text-white text-sm font-semibold flex items-center gap-2"
+            >
+              <ChefHat className="w-4 h-4" /> It's a cooked dish
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAmbiguousFiles(null);
+                setRouteMode('packaged');
+              }}
+              className="px-4 py-2.5 rounded-xl border border-amber-300 dark:border-amber-800 text-sm font-medium text-amber-900 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 flex items-center gap-2"
+            >
+              <Package className="w-4 h-4" /> It's a package — I'll retake the label
+            </button>
+            <button
+              type="button"
+              onClick={() => setAmbiguousFiles(null)}
+              className="px-4 py-2.5 rounded-xl text-sm text-stone-500 dark:text-stone-400 hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Multi-Photo Staging Drawer (if user added multiple files) */}
       {stagedFiles.length > 0 && (
@@ -500,6 +624,18 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
         />
       )}
 
+      {/* v2: Cooked-food review modal */}
+      {cookedFiles && (
+        <CookedReviewModal
+          files={cookedFiles}
+          onCancel={() => setCookedFiles(null)}
+          onConfirm={(analysis) => {
+            setCookedFiles(null);
+            onScanComplete(analysis);
+          }}
+        />
+      )}
+
       {/* Manual Review Modal */}
       {reviewPayload && (
         <ManualReviewModal
@@ -514,6 +650,7 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
           images={reviewPayload.images}
           detectionNotes={reviewPayload.detectionNotes}
           conflicts={reviewPayload.conflicts}
+          evidence={reviewPayload.evidence}
           extractionSeq={reviewSeq}
           onAddAnotherPhoto={handleAddAnotherPhotoInReview}
           onConfirm={(analyzed) => {
