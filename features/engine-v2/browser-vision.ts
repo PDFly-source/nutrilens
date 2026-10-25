@@ -74,6 +74,14 @@ export class ImageDecodeError extends Error {
     this.name = 'ImageDecodeError';
   }
 }
+export class EngineInitError extends Error {
+  /** Which init stage failed: 'import' (ORT bundle) or 'session' (WASM). */
+  constructor(public stage: 'import' | 'session', message: string) {
+    super(message);
+    this.name = 'EngineInitError';
+  }
+}
+
 export class InferenceError extends Error {
   constructor(message: string) {
     super(message);
@@ -158,14 +166,26 @@ export function loadVisionModel(): Promise<VisionSession> {
         setStatus(s);
       });
       setStatus({ state: 'preparing' });
-      // Dynamic import keeps the ORT glue OUT of the main bundle.
-      const ort = await import('onnxruntime-web');
+      // Dynamic import keeps the ORT glue OUT of the main bundle. Both init
+      // stages are wrapped as EngineInitError with the sanitized ORT detail —
+      // a raw ORT failure must never surface as a generic connection error.
+      let ort: typeof import('onnxruntime-web');
+      try {
+        ort = await import('onnxruntime-web');
+      } catch (err) {
+        throw new EngineInitError('import', `ONNX Runtime bundle failed to load: ${err instanceof Error ? err.message : String(err)}`);
+      }
       ort.env.wasm.numThreads = 1; // no cross-origin isolation on GitHub Pages
       ort.env.wasm.wasmPaths = `${basePath()}/ort/`;
-      const sess = await ort.InferenceSession.create(bytes, {
-        executionProviders: ['wasm'],
-        graphOptimizationLevel: 'all',
-      });
+      let sess: import('onnxruntime-web').InferenceSession;
+      try {
+        sess = await ort.InferenceSession.create(bytes, {
+          executionProviders: ['wasm'],
+          graphOptimizationLevel: 'all',
+        });
+      } catch (err) {
+        throw new EngineInitError('session', `Recognition engine (WASM) failed to initialize: ${err instanceof Error ? err.message : String(err)}`);
+      }
       setStatus({ state: 'ready' });
       const inputName = sess.inputNames[0];
       const outputName = sess.outputNames[0];

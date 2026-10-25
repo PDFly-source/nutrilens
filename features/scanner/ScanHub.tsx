@@ -7,9 +7,12 @@ import { ManualReviewModal } from '@/features/scanner/ManualReviewModal';
 import { CookedReviewModal } from '@/features/scanner/CookedReviewModal';
 import { FieldEvidenceMap } from '@/features/engine-v2/types';
 import { capabilitySummary } from '@/features/engine-v2/vision-provider';
-import { browserClassifyCooked, watchVisionStatus, ModelDownloadError, ImageDecodeError, InferenceError } from '@/features/engine-v2/browser-vision';
+import { browserClassifyCooked, watchVisionStatus, ModelDownloadError, ImageDecodeError, InferenceError, EngineInitError } from '@/features/engine-v2/browser-vision';
 import { decideVisionRoute, decidePackagedRoute } from '@/features/scanner/scan-routing';
-import { scanHubNotice } from '@/lib/build-info';
+import { scanHubNotice, buildLabel } from '@/lib/build-info';
+import { runRecognitionSelfTest } from '@/features/engine-v2/recognition-diagnostics';
+import { SelfTestPanel } from '@/features/engine-v2/SelfTestPanel';
+import type { RecognitionDiagnosticReport } from '@/features/engine-v2/recognition-diagnostics';
 import { DishCandidate } from '@/features/engine-v2/vision-mapping';
 import { compileProductAnalysis } from '@/features/scoring/engine';
 import { analyzeFoodImages } from '@/features/ocr/unified-analyzer';
@@ -88,6 +91,8 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
   // v2.4.1: honest model-failure state — retry or explicit user choice, never
   // a silent packaged-OCR fallback that misreads cooked food as a package.
   const [modelError, setModelError] = useState<{ message: string; files: File[] } | null>(null);
+  const [selfTest, setSelfTest] = useState<RecognitionDiagnosticReport | null>(null);
+  const [selfTestRunning, setSelfTestRunning] = useState(false);
   // v2.4.1: what the model saw (shown on the ambiguity card as a hint).
   const [visionHint, setVisionHint] = useState<DishCandidate[] | null>(null);
 
@@ -151,9 +156,13 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
         unsubscribe();
         setIsAnalyzing(false);
         const message =
-          err instanceof ModelDownloadError || err instanceof InferenceError || err instanceof ImageDecodeError
-            ? err.message
-            : 'On-device recognition could not run. Check your connection and retry, or choose a scan type below.';
+          err instanceof ModelDownloadError
+            ? `The recognition model (~9.4 MB) could not be downloaded. Check your connection and retry. (${err.message})`
+            : err instanceof EngineInitError
+              ? `${err.message} Run the engine self-test below for details.`
+              : err instanceof InferenceError || err instanceof ImageDecodeError
+                ? err.message
+                : `On-device recognition could not run. ${err instanceof Error ? err.message : ''}`;
         setModelError({ message, files });
         return;
       }
@@ -437,9 +446,29 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
               <p className="text-xs text-red-800/60 dark:text-red-400/60 mt-1.5">
                 We did not guess what this photo shows. Retry, or tell us the scan type — you stay in control.
               </p>
+              <p className="text-[11px] text-red-800/50 dark:text-red-400/50 mt-1 font-mono">
+                {buildLabel()}
+              </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2.5">
+            <button
+              type="button"
+              disabled={selfTestRunning}
+              onClick={async () => {
+                setSelfTestRunning(true);
+                setSelfTest(null);
+                try {
+                  setSelfTest(await runRecognitionSelfTest());
+                } finally {
+                  setSelfTestRunning(false);
+                }
+              }}
+              className="px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-800 text-sm font-medium text-red-900 dark:text-red-200 hover:bg-red-100/60 dark:hover:bg-red-900/30 flex items-center gap-2 disabled:opacity-50"
+            >
+              {selfTestRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+              Run engine self-test
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -476,6 +505,7 @@ export function ScanHub({ onScanComplete, onNavigateCompare }: ScanHubProps) {
               <Package className="w-4 h-4" /> It&#39;s a package — scan the label
             </button>
           </div>
+          {selfTest && <SelfTestPanel report={selfTest} />}
         </div>
       )}
 

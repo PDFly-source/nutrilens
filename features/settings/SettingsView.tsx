@@ -1,6 +1,10 @@
 'use client';
 
 import { APP_VERSION, COMMIT_SHA, buildLabel } from '@/lib/build-info';
+import { runRecognitionSelfTest } from '@/features/engine-v2/recognition-diagnostics';
+import { SelfTestPanel } from '@/features/engine-v2/SelfTestPanel';
+import type { RecognitionDiagnosticReport } from '@/features/engine-v2/recognition-diagnostics';
+import { Loader2, Activity } from 'lucide-react';
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '@/features/session/SessionContext';
@@ -31,6 +35,8 @@ export function SettingsView({ onClearSession }: SettingsViewProps) {
 
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>('system');
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [selfTest, setSelfTest] = useState<RecognitionDiagnosticReport | null>(null);
+  const [selfTestRunning, setSelfTestRunning] = useState(false);
   const [customAvoidInput, setCustomAvoidInput] = useState('');
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [energyUnit, setEnergyUnit] = useState<'kcal' | 'kJ'>('kcal');
@@ -307,6 +313,35 @@ export function SettingsView({ onClearSession }: SettingsViewProps) {
             Clear Memory
           </button>
         </div>
+      </div>
+
+      {/* Recognition engine diagnostics — local self-test, nothing uploaded */}
+      <div className="p-6 rounded-3xl bg-stone-50 dark:bg-[#1A211D] border border-stone-200/60 dark:border-stone-800 space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold text-stone-700 dark:text-stone-300">
+          <Activity className="w-3.5 h-3.5 text-[#159A6A]" /> On-device recognition engine
+        </div>
+        <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
+          Runs the exact production path locally: model download, ONNX Runtime initialization, session creation,
+          a test inference and image preprocessing. The report stays on your device.
+        </p>
+        <button
+          type="button"
+          disabled={selfTestRunning}
+          onClick={async () => {
+            setSelfTestRunning(true);
+            setSelfTest(null);
+            try {
+              setSelfTest(await runRecognitionSelfTest());
+            } finally {
+              setSelfTestRunning(false);
+            }
+          }}
+          className="px-4 py-2 rounded-xl bg-[#159A6A] hover:bg-[#12855A] disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-2"
+        >
+          {selfTestRunning && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {selfTestRunning ? 'Testing engine…' : 'Run self-test'}
+        </button>
+        {selfTest && <SelfTestPanel report={selfTest} />}
       </div>
 
       {/* About Section */}
