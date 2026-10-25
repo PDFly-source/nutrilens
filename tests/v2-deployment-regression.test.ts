@@ -44,6 +44,19 @@ test('ORT wasm runtime assets ship next to the model with stable sizes', () => {
   const glue = fs.readFileSync(path.join(REPO_ROOT, 'public/ort/ort-wasm-simd-threaded.mjs'));
   assert.equal(wasm.length, 11210254, 'wasm runtime size must be the verified one');
   assert.ok(glue.length > 10000, 'ESM glue file must be the real runtime, not a stub');
+  // v2.4.2: the bundled runtime imports the JSEP loader variant — without
+  // these two files InferenceSession.create fails on EVERY device with
+  // "no available backend found" (the confirmed v2.4.1 root cause).
+  const jsepGlue = fs.readFileSync(path.join(REPO_ROOT, 'public/ort/ort-wasm-simd-threaded.jsep.mjs'));
+  const jsepWasm = fs.readFileSync(path.join(REPO_ROOT, 'public/ort/ort-wasm-simd-threaded.jsep.wasm'));
+  assert.ok(jsepGlue.length > 10000, 'JSEP ESM glue must ship (runtime imports it)');
+  assert.equal(jsepWasm.length, 21872216, 'JSEP wasm size must be the verified one');
+  // And they must be byte-identical to the installed onnxruntime-web 1.22.0.
+  assert.deepEqual(
+    jsepGlue,
+    fs.readFileSync(path.join(REPO_ROOT, 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs')),
+    'JSEP glue must match the installed runtime version'
+  );
 });
 
 // --------------------------------------------- deployment path joins
@@ -55,6 +68,8 @@ test('registry asset paths resolve inside the static export when built', { skip:
     bundledAsset,
     '/ort/ort-wasm-simd-threaded.wasm',
     '/ort/ort-wasm-simd-threaded.mjs',
+    '/ort/ort-wasm-simd-threaded.jsep.mjs',
+    '/ort/ort-wasm-simd-threaded.jsep.wasm',
     '/manifest.webmanifest',
     '/sw.js',
     '/index.html',

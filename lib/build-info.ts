@@ -11,7 +11,7 @@
  * reappear. tests/version-consistency.test.ts enforces this.
  */
 
-export const APP_VERSION = '2.4.1';
+export const APP_VERSION = '2.4.2';
 
 /** Short commit SHA of the deployed build, or "dev" for local builds. */
 export const COMMIT_SHA: string =
